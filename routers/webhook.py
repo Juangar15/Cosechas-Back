@@ -3,7 +3,7 @@ from fastapi.responses import PlainTextResponse
 from config import WHATSAPP_VERIFY_TOKEN
 from models import MensajePrueba
 from services.bot_logic import procesar_mensaje_inteligente
-from services.whatsapp_service import procesar_imagen_whatsapp, enviar_documento_whatsapp, enviar_mensaje_whatsapp
+from services.whatsapp_service import procesar_imagen_whatsapp, procesar_documento_whatsapp, enviar_documento_whatsapp, enviar_mensaje_whatsapp
 
 router = APIRouter(tags=["webhook"])
 
@@ -53,6 +53,12 @@ async def recibir_mensajes_whatsapp_real(payload: dict = Body(...)):
                             media_id = mensaje_data["image"]["id"]
                             url_publica = await procesar_imagen_whatsapp(media_id)
                             texto_cliente = f"[IMAGEN_URL]:{url_publica}"
+
+                        elif mensaje_data.get("type") == "document":
+                            media_id = mensaje_data["document"]["id"]
+                            mime_type = mensaje_data["document"].get("mime_type", "application/pdf")
+                            url_publica = await procesar_documento_whatsapp(media_id, mime_type)
+                            texto_cliente = f"[DOCUMENTO_URL]:{url_publica}"
 
                         # --- INTERCEPTOR DE UBICACIÓN GPS ---
                         elif mensaje_data.get("type") == "location":

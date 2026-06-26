@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Query
 from typing import Optional
 import uuid
 from config import supabase
@@ -18,6 +18,7 @@ async def obtener_todos_los_tickets(
     categoria: Optional[str] = None,
     tipo_reporte: Optional[str] = None,
     motivo: Optional[str] = None,
+    orden: Optional[str] = Query("desc", description="desc para más reciente, asc para más antiguo"),
     current_user: dict = Depends(get_current_user)
 ):
     try:
@@ -61,7 +62,7 @@ async def obtener_todos_los_tickets(
         start = (page - 1) * page_size
         end = start + page_size - 1
         
-        respuesta = query.order("fecha_creacion", desc=True).range(start, end).execute()
+        respuesta = query.order("fecha_creacion", desc=(orden == "desc")).range(start, end).execute()
         
         return {
             "data": respuesta.data,

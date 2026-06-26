@@ -24,8 +24,8 @@ def encontrar_sede_mas_cercana(lat_cliente, lon_cliente):
     Consulta todas las sedes en Supabase y devuelve la más cercana a las coordenadas del cliente.
     """
     try:
-        # Traemos todas las sedes de la base de datos
-        respuesta = supabase.table("sedes_cosechas").select("*").execute()
+        # Traemos todas las sedes operando de la base de datos oficial
+        respuesta = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
         sedes = respuesta.data
         
         if not sedes:
@@ -35,14 +35,20 @@ def encontrar_sede_mas_cercana(lat_cliente, lon_cliente):
         distancia_minima = float('inf')
 
         for sede in sedes:
+            # Algunas sedes podrían no tener latitud y longitud todavía
+            if not sede.get('latitud') or not sede.get('longitud'):
+                continue
+
             dist = calcular_distancia(lat_cliente, lon_cliente, sede['latitud'], sede['longitud'])
             
             if dist < distancia_minima:
                 distancia_minima = dist
                 sede_cercana = sede
                 
-        # Le inyectamos la distancia calculada al diccionario para poder mostrarla en el mensaje
-        sede_cercana['distancia_km'] = distancia_minima
+        if sede_cercana:
+            # Le inyectamos la distancia calculada al diccionario para poder mostrarla en el mensaje
+            sede_cercana['distancia_km'] = distancia_minima
+            
         return sede_cercana
 
     except Exception as e:

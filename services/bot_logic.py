@@ -1,7 +1,35 @@
 from datetime import datetime, timezone
 from config import supabase, EMAIL_USER, EMAIL_JEFE, EMAIL_COORD_SAC, EMAIL_CAPACITADORA, EMAIL_SISTEMAS, EMAIL_GERENCIA_JURIDICA
-from services.email_service import enviar_correo_pqrs_franquiciado, enviar_correo_pqrs_interno, enviar_correo_nueva_franquicia
+from services.email_service import enviar_correo_pqrs_franquiciado, enviar_correo_pqrs_interno, enviar_correo_nueva_franquicia, enviar_correo_hoja_vida
 from services.location_service import encontrar_sede_mas_cercana
+from services.location_service import encontrar_sede_mas_cercana
+
+def guardar_lead_franquicia(celular, datos):
+    try:
+        supabase.table("solicitudes_franquicia").insert({
+            "celular": celular,
+            "nombre": datos.get("nombre_franquicia", "No especificado"),
+            "ciudad": datos.get("ciudad_franquicia", "No especificado"),
+            "correo": datos.get("correo_franquicia", "No especificado"),
+            "local_identificado": datos.get("local_identificado", "No"),
+            "involucramiento": datos.get("involucramiento", "No"),
+            "inversion_capital": datos.get("inversion_capital", "No"),
+            "tipo_lead": datos.get("tipo_lead", "C"),
+            "estado_agendamiento": datos.get("estado_agendamiento", "No aplica")
+        }).execute()
+        enviar_correo_nueva_franquicia(
+            celular, 
+            datos.get("ciudad_franquicia", ""), 
+            datos.get("local_identificado", ""), 
+            datos.get("involucramiento", ""), 
+            datos.get("inversion_capital", ""), 
+            datos.get("nombre_franquicia", ""), 
+            datos.get("correo_franquicia", ""),
+            datos.get("tipo_lead", ""),
+            datos.get("estado_agendamiento", "")
+        )
+    except Exception as e:
+        print("Error al guardar lead de franquicia:", e)
 
 def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
     texto = texto_usuario.lower().strip()
@@ -77,7 +105,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "¡Hola! Bienvenido al asistente virtual de Cosechas 🥤.\n\n"
                 "Para garantizar la seguridad de tus datos, "
                 "por favor conoce nuestra Política de Tratamiento de Datos aquí:\n"
-                "👉 https://www.cosechasexpress.com/politica-de-treatment-de-datos/\n\n"
+                "👉 https://www.cosechasexpress.com/politica-de-tratamiento-de-datos/\n\n"
                 "¿Aceptas la política para continuar?"
             )
             botones_bot = ["Aceptar", "Rechazar"]
@@ -137,29 +165,18 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             botones_bot = ["Directorio Web", "Volver"]
 
         elif texto == "hoja de vida":
-            respuesta_bot = (
-                "¡Gracias por escribirnos!\nNos encanta saber que somos una alternativa al momento de buscar empleo, para ello ten cuenta los siguientes puntos:\n\n"
-                "1. *Para ser parte de nuestra familia Cosechas en uno de nuestros puntos de venta como asesor:*\n"
-                "Debes acercarte directamente a la tienda y entregar allí tu hoja de vida, ya que son los franquiciados (dueños del punto de venta) quienes realizan esta contratación de forma directa.\n\n"
-                "2. *Para ser parte de nuestra familia Cosechas en el área Operaria o administrativa de la Franquicia Máster:*\n"
-                "Envíanos tu hoja de vida al correo de Talento Humano:\nanalistaseleccionbebidas@cerealesselecta.com\n\n"
-                "Ellos se encargarán de comunicarse contigo en caso de cumplir con el perfil de alguna de nuestras vacantes vigentes.\n\n"
-                "¡Feliz día! 🌱😉🌱"
-            )
-            botones_bot = ["Volver", "Finalizar"]
+            estado_actual = "esperando_area_trabajo"
+            respuesta_bot = "¿Dónde te gustaría trabajar? Selecciona el área de tu interés:"
+            botones_bot = ["Punto de Venta", "Sede Corporativa"]
 
         elif texto == "franquicias col" or texto == "franquicias colombia":
-            estado_actual = "esperando_interes_franquicia"
-            documento_bot = {
-                "url": "https://wfvjzahmxzzjtyimkfcr.supabase.co/storage/v1/object/public/franquicias_colombia/PRESENTACION%20FRANQUICIAS%202026_v3.pdf", 
-                "nombre": "Portafolio_Franquicias_Cosechas.pdf"
-            }
+            estado_actual = "esperando_nombre_franquicia"
             respuesta_bot = (
-                "¡Qué gran noticia que desees emprender y unirte a la familia Cosechas! 🌱\n\n"
-                "Te hemos adjuntado nuestro portafolio oficial. Revísalo y cuéntanos:\n"
-                "¿Deseas continuar con el proceso de solicitud?"
+                "Hola 👋 gracias por tu interés en la franquicia de Cosechas 🍓\n\n"
+                "Para brindarte una mejor asesoría y conocer más sobre tu perfil, queremos hacerte unas preguntas rápidas 😊 (esta info debe ser obligatoria para avanzar).\n\n"
+                "Por favor, envíame tu *Nombre completo*:"
             )
-            botones_bot = ["Sí, me interesa", "No por ahora"]
+            botones_bot = ["Volver"]
 
         elif texto == "franquicias ext" or texto == "franquicias exterior" or texto == "franquicias otros paises":
             respuesta_bot = (
@@ -198,18 +215,19 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 if sede:
                     try:
                         supabase.table("registros_domicilios").insert({
-                            "nombre_sede": sede['nombre']
+                            "nombre_sede": sede.get('ceco_nombre', 'Sede Cosechas')
                         }).execute()
                     except Exception as e:
                         print(f"Error guardando analítica de domicilio: {e}")
 
                     maps_url = f"https://www.google.com/maps/search/?api=1&query={sede['latitud']},{sede['longitud']}"
+                    telefono = sede.get('pdv_celular') or sede.get('pdv_telefono') or 'No disponible'
                     respuesta_bot = (
                         f"📍 *Sede Cosechas más cercana encontrada:*\n\n"
-                        f"🏪 *{sede['nombre']}*\n"
+                        f"🏪 *{sede.get('ceco_nombre', 'Sede Cosechas')}*\n"
                         f"📏 A tan solo *{sede['distancia_km']} km* de tu ubicación.\n"
-                        f"📞 Teléfono Domicilios: {sede['telefono']}\n"
-                        f"🗺️ Dirección: {sede['direccion']}\n\n"
+                        f"📞 Teléfono Domicilios: {telefono}\n"
+                        f"🗺️ Dirección: {sede.get('pdv_direccion', 'No disponible')}\n\n"
                         f"👉 *¿Cómo llegar?* Toca el enlace para abrir el mapa:\n{maps_url}\n\n"
                         "¿Deseas consultar algo más?"
                     )
@@ -390,8 +408,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         if texto in ["inconformidad", "sugerencia", "felicitación", "felicitacion"]:
             datos_pqrs["tipo_reporte"] = texto.capitalize()
             if texto in ["felicitación", "felicitacion"]:
-                estado_actual = "esperando_detalle_pqrs"
-                respuesta_bot = "¡Qué alegría! Nos motiva mucho leer esto. Por favor, *escribe en un solo mensaje* tu felicitación:\n\n*(Si deseas cancelar, toca 'Volver')*"
+                estado_actual = "esperando_nombre_pqrs"
+                respuesta_bot = "¡Qué alegría! Nos motiva mucho leer esto. Para saber quién nos escribe, por favor indícanos tu *Nombre Completo*:\n\n*(Si deseas cancelar, toca 'Volver')*"
                 botones_bot = ["Volver"]
             else:
                 estado_actual = "esperando_motivo_pqrs"
@@ -411,7 +429,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 respuesta_bot = "Selecciona el tipo de novedad respecto al *Servicio*:"
                 botones_bot = {
                     "tipo": "lista", "boton": "Ver Novedades",
-                    "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Pago/Novedad", "Disponibilidad carta"]
+                    "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta"]
                 }
             elif texto == "producto":
                 respuesta_bot = "Selecciona el tipo de novedad respecto al *Producto*:"
@@ -423,7 +441,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 respuesta_bot = "Selecciona el tipo de novedad de *Servicio o Producto* que más se ajuste:"
                 botones_bot = {
                     "tipo": "lista", "boton": "Ver Novedades",
-                    "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Pago/Novedad", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto"]
+                    "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto"]
                 }
         else:
             respuesta_bot = "⚠️ Opción no reconocida. Por favor, elige el motivo:"
@@ -432,7 +450,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
     elif estado_actual == "esperando_novedad_pqrs":
         opciones_validas = [
             "actitud del asesor", "horario", "presentación sede", "presentacion sede", 
-            "pago/novedad", "disponibilidad carta", "preparación", "preparacion", "objeto en el producto", "presentación producto", "presentacion producto"
+            "factura electrónica", "factura electronica", "disponibilidad carta", "preparación", "preparacion", "objeto en el producto", "presentación producto", "presentacion producto"
         ]
         if texto in opciones_validas:
             # Revertir la normalización de la tilde al capitalizar
@@ -442,18 +460,31 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             if texto in ["presentacion producto", "presentación producto"]: novedad_text = "Presentación del producto"
             
             datos_pqrs["tipo"] = novedad_text.capitalize() if novedad_text not in ["Presentación establecimiento", "Presentación del producto"] else novedad_text
-            estado_actual = "esperando_detalle_pqrs"
-            respuesta_bot = "Entendido. Por favor, *escribe en un solo mensaje* el detalle exacto de lo sucedido:\n\n*(Si deseas cancelar, toca 'Volver')*"
+            estado_actual = "esperando_nombre_pqrs"
+            respuesta_bot = "Entendido. Para brindarte una atención personalizada, por favor escríbeme tu *Nombre Completo*:\n\n*(Si deseas cancelar, toca 'Volver')*"
             botones_bot = ["Volver"]
         else:
             respuesta_bot = "⚠️ Novedad no reconocida. Por favor selecciona una opción de la lista:"
             mot = datos_pqrs.get("motivo", "").lower()
             if mot == "servicio":
-                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Pago/Novedad", "Disponibilidad carta"]}
+                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta"]}
             elif mot == "producto":
                 botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Preparación", "Objeto en el producto", "Presentación producto"]}
             else:
-                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Pago/Novedad", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto"]}
+                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto"]}
+
+    elif estado_actual == "esperando_nombre_pqrs":
+        datos_pqrs["nombre_cliente"] = texto_usuario
+        estado_actual = "esperando_correo_pqrs"
+        respuesta_bot = f"Gracias, {texto_usuario.split()[0].capitalize()}. Ahora por favor escríbeme tu *Correo Electrónico* para notificarte sobre la respuesta a tu caso:\n\n*(Si no tienes o no deseas darlo, toca 'Saltar Correo')*"
+        botones_bot = ["Saltar Correo", "Volver"]
+
+    elif estado_actual == "esperando_correo_pqrs":
+        correo = None if texto == "saltar correo" else texto_usuario
+        datos_pqrs["correo_cliente"] = correo
+        estado_actual = "esperando_detalle_pqrs"
+        respuesta_bot = "¡Perfecto! Ahora, por favor *escribe en un solo mensaje* el detalle exacto de lo sucedido:\n\n*(Si deseas cancelar, toca 'Volver')*"
+        botones_bot = ["Volver"]
 
     elif estado_actual == "esperando_detalle_pqrs":
         datos_pqrs["detalle"] = texto_usuario 
@@ -477,6 +508,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         detalle = datos_pqrs.get("detalle", "")
         nit_guardar = datos_pqrs.get("nit")
         local_nombre = datos_pqrs.get("local", "Cosechas")
+        nombre_cliente = datos_pqrs.get("nombre_cliente", "No especificado")
+        correo_cliente = datos_pqrs.get("correo_cliente", "No especificado")
         
         destinatario_interno = EMAIL_COORD_SAC
         nombre_area = "Coordinación de Servicio al Cliente"
@@ -486,7 +519,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             if motivo in ["Servicio", "Servicio-Producto"]:
                 destinatario_interno = EMAIL_COORD_SAC
                 nombre_area = "Coordinación de Servicio al Cliente"
-                if tipo == "Pago/Novedad":
+                if tipo in ["Factura electrónica", "Factura electronica", "Pago/Novedad"]:
                     correos_extra.append(EMAIL_SISTEMAS)
             elif motivo == "Producto":
                 if tipo in ["Preparación", "Presentación del producto"]:
@@ -509,7 +542,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_insert = supabase.table("tickets_pqrs").insert({
                 "celular_cliente": celular, "nit_franquiciado": nit_guardar, "nombre_franquicia": local_nombre,
                 "tipo_reporte": tipo_reporte, "motivo": motivo,
-                "tipo_novedad": tipo, "detalle": detalle, "evidencia": tiene_foto 
+                "tipo_novedad": tipo, "detalle": detalle, "evidencia": tiene_foto,
+                "nombre_cliente": nombre_cliente, "correo_cliente": correo_cliente
             }).execute()
             
             if respuesta_insert.data:
@@ -522,11 +556,11 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             tipo_completo = f"{tipo_reporte} ({motivo}) - {tipo}" if motivo else f"{tipo_reporte} - {tipo}"
             
             # 1. Al Franquiciado
-            enviar_correo_pqrs_franquiciado(correo_franquiciado_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area)
+            enviar_correo_pqrs_franquiciado(correo_franquiciado_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area, nombre_cliente, correo_cliente)
             
             # 2. Al Equipo Interno
             if correos_internos_str:
-                enviar_correo_pqrs_interno(correos_internos_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, nombre_area)
+                enviar_correo_pqrs_interno(correos_internos_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, nombre_area, nombre_cliente, correo_cliente)
                 
             print("✅ Correos PQRS enviados separadamente.")
         except Exception as e:
@@ -542,68 +576,204 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             
         botones_bot = ["Volver"]
 
-    elif estado_actual == "esperando_interes_franquicia":
-        if texto in ["sí, me interesa", "si, me interesa", "si"]:
-            estado_actual = "esperando_ciudad_franquicia" 
-            respuesta_bot = "¡Excelente! 🎉 Para empezar, por favor dime:\n\n📍 *¿En qué ciudad te gustaría abrir tu franquicia Cosechas?*"
-            botones_bot = ["Volver"]
-        elif texto in ["no por ahora", "no"]:
-            estado_actual = "menu_opciones"
-            respuesta_bot = "Entendemos. Estaremos aquí cuando decidas dar el gran paso. ¡Mucho éxito! 🥤\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Volver", "Finalizar"]
-        else:
-            respuesta_bot = "⚠️ Por favor, utiliza los botones para indicarnos si deseas continuar:"
-            botones_bot = ["Sí, me interesa", "No por ahora"]
+    elif estado_actual == "esperando_nombre_franquicia":
+        datos_pqrs["nombre_franquicia"] = texto_usuario
+        estado_actual = "esperando_ciudad_franquicia"
+        respuesta_bot = f"Mucho gusto, {texto_usuario.split()[0].capitalize()}. Ahora dime:\n\n📍 *¿En qué ciudad te gustaría abrir tu franquicia Cosechas?*"
+        botones_bot = ["Volver"]
 
     elif estado_actual == "esperando_ciudad_franquicia":
-        datos_pqrs["ciudad_franquicia"] = texto_usuario 
-        estado_actual = "esperando_direccion_local"
-        respuesta_bot = (
-            f"¡Perfecto! {texto_usuario.title()} es una excelente plaza para Cosechas. 🥤\n\n"
-            "Para avanzar, necesitamos evaluar la ubicación. Por favor, escríbeme la *dirección exacta del posible local* que tienes en vista.\n\n"
-            "⚠️ *Nota:* Te recomendamos NO firmar contratos ni arrendar el local hasta que nuestro equipo de expansión apruebe la viabilidad del punto.\n\n"
-            "*(Si aún no tienes una opción vista, toca el botón de abajo)*"
-        )
-        botones_bot = ["Aún no tengo local", "Volver"]
+        datos_pqrs["ciudad_franquicia"] = texto_usuario
+        estado_actual = "esperando_correo_franquicia"
+        respuesta_bot = "¡Perfecto! Por favor escríbeme tu *Correo electrónico* para que nuestros asesores puedan contactarte:"
+        botones_bot = ["Volver"]
 
-    elif estado_actual == "esperando_direccion_local":
-        if texto in ["aún no tengo local", "aun no tengo local"]:
+    elif estado_actual == "esperando_correo_franquicia":
+        datos_pqrs["correo_franquicia"] = texto_usuario
+        estado_actual = "esperando_local_franquicia"
+        respuesta_bot = "¿Ya tienes un local o zona identificada para abrir?"
+        botones_bot = ["Sí", "Estoy en búsqueda", "No"]
+
+    elif estado_actual == "esperando_local_franquicia":
+        opciones_validas = ["sí", "si", "estoy en búsqueda", "estoy en busqueda", "no"]
+        if texto in opciones_validas:
+            val = "Estoy en búsqueda" if "busqueda" in texto or "búsqueda" in texto else ("Sí" if "si" in texto or "sí" in texto else "No")
+            datos_pqrs["local_identificado"] = val
+            estado_actual = "esperando_involucramiento_franquicia"
+            respuesta_bot = "¿Qué nivel de involucramiento tendrías en el negocio?"
+            botones_bot = ["Directo", "Supervisión", "Inversión pasiva"]
+        else:
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Sí", "Estoy en búsqueda", "No"]
+
+    elif estado_actual == "esperando_involucramiento_franquicia":
+        opciones_validas = ["directo", "supervisión", "supervision", "inversión pasiva", "inversion pasiva"]
+        if texto in opciones_validas:
+            if "directo" in texto: val = "Directo"
+            elif "supervis" in texto: val = "Supervisión"
+            else: val = "Inversión pasiva"
+            datos_pqrs["involucramiento"] = val
+            estado_actual = "esperando_inversion_franquicia"
+            respuesta_bot = "¿Cuentas con una inversión aproximada de $130 millones para abrir tu punto?"
+            botones_bot = ["Sí", "Parcialmente", "No"]
+        else:
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Directo", "Supervisión", "Inversión pasiva"]
+
+    elif estado_actual == "esperando_inversion_franquicia":
+        opciones_validas = ["sí", "si", "parcialmente", "no"]
+        if texto in opciones_validas:
+            val = "Parcialmente" if "parcialmente" in texto else ("Sí" if "si" in texto or "sí" in texto else "No")
+            datos_pqrs["inversion_capital"] = val
+            
+            local = datos_pqrs.get("local_identificado")
+            involucramiento = datos_pqrs.get("involucramiento")
+            capital = datos_pqrs.get("inversion_capital")
+            
+            tipo_lead = "C"
+            if capital == "No" or involucramiento == "Inversión pasiva":
+                tipo_lead = "C"
+            elif capital == "Sí" and involucramiento in ["Directo", "Supervisión"] and local in ["Sí", "Estoy en búsqueda"]:
+                tipo_lead = "A"
+            elif capital == "Parcialmente" and involucramiento in ["Directo", "Supervisión"]:
+                tipo_lead = "B"
+            elif capital == "Sí" and involucramiento in ["Directo", "Supervisión"] and local == "No":
+                tipo_lead = "B"
+                
+            datos_pqrs["tipo_lead"] = tipo_lead
+            
+            if tipo_lead in ["A", "B"]:
+                estado_actual = "esperando_agendamiento_franquicia"
+                respuesta_bot = (
+                    "¡Excelente! 🙌\nTu perfil se ajusta muy bien a nuestra franquicia.\n\n"
+                    "¿Te gustaría agendar un espacio virtual con nuestra especialista de franquicias para resolver todas tus dudas y conocer el paso a paso?"
+                )
+                botones_bot = ["Sí, agendar", "Más información"]
+            else:
+                datos_pqrs["estado_agendamiento"] = "No aplica"
+                guardar_lead_franquicia(celular, datos_pqrs)
+                estado_actual = "menu_opciones"
+                datos_pqrs = {}
+                respuesta_bot = (
+                    "¡Gracias por tu interés! 🙌\n\n"
+                    "En este momento buscamos perfiles que cuenten con el capital requerido y un nivel de involucramiento activo en la operación, ya que esto es clave para el éxito de la franquicia.\n\n"
+                    "Si más adelante cumples con estas condiciones, estaremos felices de acompañarte en tu proceso 🚀"
+                )
+                botones_bot = ["Volver", "Finalizar"]
+        else:
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Sí", "Parcialmente", "No"]
+
+    elif estado_actual == "esperando_agendamiento_franquicia":
+        if texto in ["sí, agendar", "si, agendar", "si agendar", "si"]:
+            datos_pqrs["estado_agendamiento"] = "Sí, agendar"
+            guardar_lead_franquicia(celular, datos_pqrs)
             estado_actual = "menu_opciones"
+            datos_pqrs = {}
+            respuesta_bot = "¡Perfecto! 🙌 Nos comunicaremos contigo para coordinar tu disponibilidad y programar la reunión virtual."
+            botones_bot = ["Volver", "Finalizar"]
+        elif texto in ["más información", "mas informacion", "quiero más información primero", "mas informacion primero"]:
+            estado_actual = "esperando_confirmacion_agendamiento"
             respuesta_bot = (
-                "Entendemos. Para poder realizar el estudio de viabilidad y avanzar con tu solicitud, es requisito indispensable tener al menos una opción de local comercial en vista para ser evaluada.\n\n"
-                "¡Te invitamos a buscar el lugar ideal y escribirnos nuevamente cuando tengas un posible local! Estaremos felices de apoyarte a cumplir este sueño. 🌱"
+                "¡Claro! 😊 Te cuento brevemente:\n\n"
+                "Cosechas es una franquicia con una inversión aproximada de $130 millones, con acompañamiento en todo el proceso: desde la elección del punto, montaje, capacitación y operación.\n"
+                "Es un modelo probado, con ubicaciones estratégicas y una operación sencilla, lo que facilita la gestión del negocio.\n\n"
+                "¿Te gustaría agendar un espacio con nuestra especialista de franquicias?"
             )
+            botones_bot = ["Sí, agendar", "Aún no"]
+        else:
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Sí, agendar", "Más información"]
+
+    elif estado_actual == "esperando_confirmacion_agendamiento":
+        if texto in ["sí, agendar", "si, agendar", "si agendar", "si"]:
+            datos_pqrs["estado_agendamiento"] = "Sí, agendar"
+            guardar_lead_franquicia(celular, datos_pqrs)
+            estado_actual = "menu_opciones"
+            datos_pqrs = {}
+            respuesta_bot = "¡Perfecto! 🙌 Nos comunicaremos contigo para coordinar tu disponibilidad y programar la reunión virtual."
+            botones_bot = ["Volver", "Finalizar"]
+        elif texto in ["aún no", "aun no", "no"]:
+            datos_pqrs["estado_agendamiento"] = "Aún no"
+            guardar_lead_franquicia(celular, datos_pqrs)
+            estado_actual = "menu_opciones"
+            datos_pqrs = {}
+            respuesta_bot = "Igualmente, te recomiendo una llamada corta, ya que podemos revisar tu caso específico y resolver todas tus dudas mucho más rápido 🙌"
             botones_bot = ["Volver", "Finalizar"]
         else:
-            datos_pqrs["direccion_local"] = texto_usuario 
-            estado_actual = "esperando_dudas_franquicia"
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Sí, agendar", "Aún no"]
+
+    elif estado_actual == "esperando_area_trabajo":
+        if texto in ["punto de venta", "punto de venta "]:
+            estado_actual = "menu_opciones"
+            datos_pqrs = {}
             respuesta_bot = (
-                "¡Perfecto! Hemos registrado la posible dirección para su evaluación.\n\n"
-                "Ahora, por favor escríbeme *en un solo mensaje* qué dudas o inquietudes tienes sobre el modelo de negocio o el proceso a seguir:"
+                "Entendido. Cada punto de venta realiza sus contrataciones de forma independiente.\n\n"
+                "👉 Te recomendamos acercarte a la tienda de tu interés con tu hoja de vida impresa para hablar directamente con el franquiciado.\n\n"
+                "¡Mucho éxito en tu búsqueda! 🌱"
             )
+            botones_bot = ["Volver", "Finalizar"]
+        elif texto in ["sede corporativa", "sede corporativa "]:
+            estado_actual = "esperando_ciudad_corporativo"
+            datos_pqrs["tipo_empleo"] = "Corporativo"
+            respuesta_bot = "¡Excelente elección! Buscamos talento para nuestra sede principal.\n\nPor favor, indícanos desde qué ciudad te postulas:"
+            botones_bot = ["Medellín", "Bogotá"]
+        else:
+            respuesta_bot = "⚠️ Opción no reconocida. Por favor, selecciona una:"
+            botones_bot = ["Punto de Venta", "Sede Corporativa"]
+
+    elif estado_actual == "esperando_ciudad_corporativo":
+        if texto in ["medellín", "medellin", "bogotá", "bogota"]:
+            datos_pqrs["ciudad_corporativo"] = "Medellín" if texto in ["medellín", "medellin"] else "Bogotá"
+            estado_actual = "esperando_nombre_corporativo"
+            respuesta_bot = "Entendido. Ahora por favor, escribe tu *Nombre Completo*:"
             botones_bot = ["Volver"]
+        else:
+            respuesta_bot = "⚠️ Ciudad no reconocida. Por favor, selecciona una de las opciones:"
+            botones_bot = ["Medellín", "Bogotá"]
 
-    elif estado_actual == "esperando_dudas_franquicia":
-        dudas = texto_usuario
-        direccion = datos_pqrs.get("direccion_local", "No especificada")
-        ciudad = datos_pqrs.get("ciudad_franquicia", "No especificada") 
-        
-        try:
-            supabase.table("solicitudes_franquicia").insert({
-                "celular": celular, "ciudad": ciudad, "direccion_local": direccion, "dudas": dudas
-            }).execute()
-            enviar_correo_nueva_franquicia(celular, ciudad, direccion, dudas)
-        except Exception as e:
-            print("Error al guardar lead de franquicia:", e)
-
-        estado_actual = "menu_opciones"
-        datos_pqrs = {} 
+    elif estado_actual == "esperando_nombre_corporativo":
+        datos_pqrs["nombre_candidato"] = texto_usuario
+        estado_actual = "esperando_cv_corporativo"
         respuesta_bot = (
-            "✅ *¡Solicitud enviada con éxito!*\n\n"
-            "Hemos recibido tus datos y tus inquietudes. Un asesor de expansión se comunicará contigo próximamente al número con el que nos estás escribiendo para brindarte toda la asesoría.\n\n"
-            "¡Gracias por querer crecer con Cosechas! 🥤"
+            f"Gracias, {texto_usuario.split()[0].capitalize()}.\n\n"
+            "Para completar tu postulación a Sede Corporativa, necesitamos tu Hoja de Vida. 📄\n\n"
+            "Por favor, *adjunta y envía tu Hoja de Vida en formato PDF o Imagen* ahora mismo aquí en el chat."
         )
-        botones_bot = ["Volver", "Finalizar"]
+        botones_bot = ["Volver"]
+
+    elif estado_actual == "esperando_cv_corporativo":
+        url_archivo = None
+        if "[documento_url]:" in texto:
+            url_archivo = texto.split("]:")[1]
+        elif "[imagen_url]:" in texto:
+            url_archivo = texto.split("]:")[1]
+            
+        if not url_archivo:
+            respuesta_bot = "⚠️ No detecté un archivo válido.\n\nPor favor, adjunta el documento PDF de tu Hoja de Vida usando el ícono de clip 📎."
+            botones_bot = ["Volver"]
+        else:
+            nombre = datos_pqrs.get("nombre_candidato", "No especificado")
+            ciudad = datos_pqrs.get("ciudad_corporativo", "No especificada")
+            try:
+                supabase.table("candidatos_corporativos").insert({
+                    "celular": celular, "nombre": nombre, "url_pdf": url_archivo, "ciudad": ciudad
+                }).execute()
+                # Enviar correo a RRHH
+                enviar_correo_hoja_vida(nombre, celular, url_archivo, ciudad)
+            except Exception as e:
+                print("Error al guardar CV corporativo:", e)
+                
+            estado_actual = "menu_opciones"
+            datos_pqrs = {}
+            respuesta_bot = (
+                "✅ *¡Postulación Exitosa!*\n\n"
+                "Hemos recibido tu Hoja de Vida y ha sido enviada directamente a Talento Humano.\n\n"
+                "Ellos se encargarán de revisarla y se comunicarán contigo en caso de cumplir con el perfil de alguna vacante vigente.\n\n"
+                "¡Mucho éxito! 🌱😉🌱"
+            )
+            botones_bot = ["Volver", "Finalizar"]
 
     # --- PASO C: SINCRONIZACIÓN DE ESTADO ---
     try:

@@ -12,7 +12,8 @@ async def obtener_todas_las_solicitudes(
     search: Optional[str] = None,
     estado: Optional[str] = None,
     fecha_inicio: Optional[str] = None,
-    fecha_fin: Optional[str] = None
+    fecha_fin: Optional[str] = None,
+    orden: Optional[str] = "desc"
 ):
     try:
         query = supabase.table("solicitudes_franquicia").select("*", count="exact")
@@ -32,7 +33,7 @@ async def obtener_todas_las_solicitudes(
         start = (page - 1) * page_size
         end = start + page_size - 1
         
-        respuesta = query.order("fecha_creacion", desc=True).range(start, end).execute()
+        respuesta = query.order("fecha_creacion", desc=(orden == "desc")).range(start, end).execute()
         
         return {
             "data": respuesta.data,

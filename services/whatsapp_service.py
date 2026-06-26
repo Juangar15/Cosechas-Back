@@ -199,3 +199,48 @@ async def procesar_imagen_whatsapp(media_id: str) -> str:
     except Exception as e:
         print("Error general procesando imagen desde WhatsApp:", e)
         return "Error de carga"
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)), before_sleep=log_retry, reraise=True)
+async def procesar_documento_whatsapp(media_id: str, mime_type: str = "application/pdf") -> str:
+    try:
+        url_info = f"https://graph.facebook.com/v17.0/{media_id}"
+        headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
+        
+        async with httpx.AsyncClient() as client:
+            res_info_response = await client.get(url_info, headers=headers)
+            if res_info_response.status_code >= 500:
+                res_info_response.raise_for_status()
+                
+            res_info = res_info_response.json()
+            
+            if "url" not in res_info:
+                return "Sin archivo"
+                
+            url_descarga = res_info["url"]
+            res_img = await client.get(url_descarga, headers=headers)
+            if res_img.status_code >= 500:
+                res_img.raise_for_status()
+                
+            contenido_archivo = res_img.content
+        
+        extension = ".pdf" if "pdf" in mime_type.lower() else ".bin"
+        nombre_unico = f"cv_corporativo_{uuid.uuid4()}{extension}"
+        
+        # Subir al bucket de hojas_de_vida o a evidencias-pqrs si no hay otro creado
+        # Para evitar que falle si no crearon el bucket, intentaremos usar evidencias-pqrs por defecto si es necesario,
+        # pero idealmente debería existir "hojas-de-vida". Asumamos "evidencias-pqrs" por ahora para evitar crasheos,
+        # o sugerir crear "hojas-de-vida". Lo guardaremos en evidencias-pqrs para asegurar funcionalidad sin crear más buckets.
+        supabase.storage.from_("evidencias-pqrs").upload(
+            path=nombre_unico,
+            file=contenido_archivo,
+            file_options={"content-type": mime_type}
+        )
+        
+        return supabase.storage.from_("evidencias-pqrs").get_public_url(nombre_unico)
+        
+    except httpx.RequestError as e:
+        print("Error de red procesando documento desde WhatsApp:", e)
+        raise
+    except Exception as e:
+        print("Error general procesando documento desde WhatsApp:", e)
+        return "Error de carga"

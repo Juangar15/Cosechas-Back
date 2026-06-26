@@ -5,10 +5,10 @@ from typing import Optional
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
-def is_within_period(date_str: str, periodo: str) -> bool:
+def is_within_period(date_str: str, periodo: str, fecha_inicio: str = None, fecha_fin: str = None) -> bool:
     if not date_str:
         return False
-    if not periodo or periodo == "historico":
+    if periodo == "historico":
         return True
         
     # Verificar si el periodo es un formato YYYY-MM
@@ -44,6 +44,16 @@ def is_within_period(date_str: str, periodo: str) -> bool:
             return now - item_date <= timedelta(days=30)
         elif periodo == "anio":
             return now - item_date <= timedelta(days=365)
+        elif periodo == "personalizado":
+            if fecha_inicio:
+                start_date = datetime.strptime(fecha_inicio, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                if item_date < start_date:
+                    return False
+            if fecha_fin:
+                end_date = datetime.strptime(fecha_fin, "%Y-%m-%d").replace(tzinfo=timezone.utc, hour=23, minute=59, second=59)
+                if item_date > end_date:
+                    return False
+            return True
     except Exception as e:
         print(f"Error parsing date {date_str}: {e}")
         pass
@@ -51,7 +61,11 @@ def is_within_period(date_str: str, periodo: str) -> bool:
     return True
 
 @router.get("/pqrs")
-async def get_pqrs_analytics(periodo: Optional[str] = Query("historico", description="semana, mes, anio, historico")):
+async def get_pqrs_analytics(
+    periodo: Optional[str] = Query("historico", description="semana, mes, anio, personalizado, historico"),
+    fecha_inicio: Optional[str] = None,
+    fecha_fin: Optional[str] = None
+):
     try:
         respuesta = supabase.table("tickets_pqrs").select("*").execute()
         tickets = respuesta.data
@@ -62,7 +76,7 @@ async def get_pqrs_analytics(periodo: Optional[str] = Query("historico", descrip
         for t in tickets:
             # Revisar columna de fecha
             date_col = t.get("fecha_creacion") or t.get("created_at")
-            if is_within_period(date_col, periodo):
+            if is_within_period(date_col, periodo, fecha_inicio, fecha_fin):
                 total += 1
                 if t.get("estado") == "Cerrado":
                     cerrados += 1
@@ -79,7 +93,11 @@ async def get_pqrs_analytics(periodo: Optional[str] = Query("historico", descrip
         raise HTTPException(status_code=500, detail="Error interno.")
 
 @router.get("/pqrs/mensual")
-async def get_pqrs_mensual():
+async def get_pqrs_mensual(
+    periodo: Optional[str] = Query("historico"),
+    fecha_inicio: Optional[str] = None,
+    fecha_fin: Optional[str] = None
+):
     """
     Retorna la tendencia mensual de PQRS a lo largo del tiempo.
     """
@@ -93,7 +111,7 @@ async def get_pqrs_mensual():
         
         for t in tickets:
             date_col = t.get("fecha_creacion") or t.get("created_at")
-            if date_col:
+            if date_col and is_within_period(date_col, periodo, fecha_inicio, fecha_fin):
                 try:
                     clean_date_str = date_col.replace("Z", "+00:00")
                     item_date = datetime.fromisoformat(clean_date_str)
@@ -119,8 +137,10 @@ async def get_pqrs_mensual():
         raise HTTPException(status_code=500, detail="Error interno.")
 
 @router.get("/pqrs/sedes")
-async def get_pqrs_by_sede(
-    periodo: Optional[str] = Query("historico", description="semana, mes, anio, historico"),
+async def get_pqrs_sedes_analytics(
+    periodo: Optional[str] = Query("historico", description="semana, mes, anio, personalizado, historico"),
+    fecha_inicio: Optional[str] = None,
+    fecha_fin: Optional[str] = None,
     limite: Optional[int] = Query(None, description="Número máximo de sedes a retornar (ej: 10 para el Top 10)")
 ):
     """
@@ -136,7 +156,7 @@ async def get_pqrs_by_sede(
         
         for t in tickets:
             date_col = t.get("fecha_creacion") or t.get("created_at")
-            if is_within_period(date_col, periodo):
+            if is_within_period(date_col, periodo, fecha_inicio, fecha_fin):
                 sede = t.get("nombre_franquicia") or "Sede Desconocida"
                 nit = t.get("nit_franquiciado")
                 
@@ -201,7 +221,11 @@ async def get_sedes_nueva_imagen():
         raise HTTPException(status_code=500, detail="Error interno.")
 
 @router.get("/franquicias")
-async def get_franquicias_analytics(periodo: Optional[str] = Query("historico", description="semana, mes, anio, historico")):
+async def get_franquicias_analytics(
+    periodo: Optional[str] = Query("historico", description="semana, mes, anio, personalizado, historico"),
+    fecha_inicio: Optional[str] = None,
+    fecha_fin: Optional[str] = None
+):
     try:
         respuesta = supabase.table("solicitudes_franquicia").select("*").execute()
         solicitudes = respuesta.data
@@ -210,7 +234,7 @@ async def get_franquicias_analytics(periodo: Optional[str] = Query("historico", 
         
         for s in solicitudes:
             date_col = s.get("fecha_creacion") or s.get("created_at")
-            if is_within_period(date_col, periodo):
+            if is_within_period(date_col, periodo, fecha_inicio, fecha_fin):
                 ciudad = s.get("ciudad")
                 if ciudad:
                     ciudad_clean = ciudad.strip().title()
@@ -225,7 +249,11 @@ async def get_franquicias_analytics(periodo: Optional[str] = Query("historico", 
         raise HTTPException(status_code=500, detail="Error interno.")
 
 @router.get("/domicilios")
-async def get_domicilios_analytics(periodo: Optional[str] = Query("historico", description="semana, mes, anio, historico")):
+async def get_domicilios_analytics(
+    periodo: Optional[str] = Query("historico", description="semana, mes, anio, personalizado, historico"),
+    fecha_inicio: Optional[str] = None,
+    fecha_fin: Optional[str] = None
+):
     try:
         respuesta = supabase.table("registros_domicilios").select("*").execute()
         registros = respuesta.data
@@ -234,7 +262,7 @@ async def get_domicilios_analytics(periodo: Optional[str] = Query("historico", d
         
         for r in registros:
             date_col = r.get("fecha") or r.get("created_at") or r.get("fecha_creacion")
-            if is_within_period(date_col, periodo):
+            if is_within_period(date_col, periodo, fecha_inicio, fecha_fin):
                 sede = r.get("nombre_sede")
                 if sede:
                     sedes_count[sede] = sedes_count.get(sede, 0) + 1
@@ -245,4 +273,32 @@ async def get_domicilios_analytics(periodo: Optional[str] = Query("historico", d
         return resultado
     except Exception as e:
         print("Error analytics domicilios:", e)
+        raise HTTPException(status_code=500, detail="Error interno.")
+
+@router.get("/candidatos")
+async def get_candidatos_analytics(
+    periodo: Optional[str] = Query("historico", description="semana, mes, anio, personalizado, historico"),
+    fecha_inicio: Optional[str] = None,
+    fecha_fin: Optional[str] = None
+):
+    """
+    Retorna la cantidad de candidatos para sedes corporativas.
+    """
+    try:
+        respuesta_corp = supabase.table("candidatos_corporativos").select("*").execute()
+        
+        corp_count = 0
+        corp_lista = []
+        for c in respuesta_corp.data:
+            date_col = c.get("created_at") or c.get("fecha_creacion")
+            if is_within_period(date_col, periodo, fecha_inicio, fecha_fin):
+                corp_count += 1
+                corp_lista.append(c)
+                
+        return {
+            "corporativos": corp_count,
+            "detalle_corporativos": corp_lista
+        }
+    except Exception as e:
+        print("Error analytics candidatos:", e)
         raise HTTPException(status_code=500, detail="Error interno.")

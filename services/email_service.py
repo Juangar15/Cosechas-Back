@@ -11,7 +11,7 @@ def log_retry_email(retry_state):
     print(f"⚠️ Reintentando envío de correo SMTP (Intento {retry_state.attempt_number}/3) debido a: {retry_state.outcome.exception()}")
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
-def enviar_correo_pqrs_franquiciado(destinatario: str, radicado: str, tipo: str, detalle: str, local: str, celular: str, correo_interno: str, nombre_area: str):
+def enviar_correo_pqrs_franquiciado(destinatario: str, radicado: str, tipo: str, detalle: str, local: str, celular: str, correo_interno: str, nombre_area: str, nombre_cliente: str, correo_cliente: str):
     mensaje = MIMEMultipart("alternative")
     mensaje['From'] = f"Cosechas PQRS <{EMAIL_USER}>"
     mensaje['To'] = destinatario 
@@ -62,16 +62,18 @@ def enviar_correo_pqrs_franquiciado(destinatario: str, radicado: str, tipo: str,
                 <div class="details-box">
                     <table class="details-table">
                         <tr><td width="35%"><span class="highlight">🎫 Radicado:</span></td><td width="65%"><strong>#{radicado}</strong></td></tr>
+                        <tr><td><span class="highlight">👤 Nombre:</span></td><td>{nombre_cliente}</td></tr>
                         <tr><td><span class="highlight">📱 Contacto:</span></td><td>{celular}</td></tr>
+                        <tr><td><span class="highlight">✉️ Correo:</span></td><td>{correo_cliente}</td></tr>
                         <tr><td><span class="highlight">⚠️ Categoría:</span></td><td><span class="badge-alegria">{tipo}</span></td></tr>
                     </table>
                     <div class="detalle-texto">"{detalle}"</div>
                 </div>
 
                 <div class="alert-box">
-                    <strong>📌 Gestión del Caso:</strong><br><br>
-                    Es indispensable contactar al cliente a la brevedad para brindarle una solución oportuna.<br><br>
-                    Utilice el siguiente botón para comunicarse directamente con <strong>{nombre_area} Cosechas Máster</strong> en caso de requerir apoyo operativo, o bien, para notificar la solución del caso y solicitar su cierre en el sistema:
+                    <strong>📌 Información del Caso:</strong><br><br>
+                    Le informamos que este caso ya está en manos de <strong>{nombre_area} Cosechas Máster</strong>. Nuestro equipo central se encargará de gestionar el reporte y comunicarse directamente con el cliente para brindarle una solución.<br><br>
+                    Si considera que debe aportar información adicional a este caso, puede contactarnos a través del siguiente botón:
                     <br>
                     <a href="mailto:{correo_interno}?subject={asunto_encoded}" class="btn-action">
                         Contactar a {nombre_area}
@@ -100,7 +102,7 @@ def enviar_correo_pqrs_franquiciado(destinatario: str, radicado: str, tipo: str,
         return False
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
-def enviar_correo_pqrs_interno(destinatarios: str, radicado: str, tipo: str, detalle: str, local: str, celular: str, nombre_area: str):
+def enviar_correo_pqrs_interno(destinatarios: str, radicado: str, tipo: str, detalle: str, local: str, celular: str, nombre_area: str, nombre_cliente: str, correo_cliente: str):
     mensaje = MIMEMultipart("alternative")
     mensaje['From'] = f"Cosechas PQRS <{EMAIL_USER}>"
     mensaje['To'] = destinatarios 
@@ -144,7 +146,9 @@ def enviar_correo_pqrs_interno(destinatarios: str, radicado: str, tipo: str, det
                 <div class="details-box">
                     <table class="details-table">
                         <tr><td width="35%"><span class="highlight">🎫 Radicado:</span></td><td width="65%"><strong>#{radicado}</strong></td></tr>
+                        <tr><td><span class="highlight">👤 Nombre:</span></td><td>{nombre_cliente}</td></tr>
                         <tr><td><span class="highlight">📱 Contacto:</span></td><td>{celular}</td></tr>
+                        <tr><td><span class="highlight">✉️ Correo:</span></td><td>{correo_cliente}</td></tr>
                         <tr><td><span class="highlight">⚠️ Categoría:</span></td><td><span class="badge-alegria">{tipo}</span></td></tr>
                     </table>
                     <div class="detalle-texto">"{detalle}"</div>
@@ -176,13 +180,17 @@ def enviar_correo_pqrs_interno(destinatarios: str, radicado: str, tipo: str, det
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
-def enviar_correo_nueva_franquicia(celular: str, ciudad: str, direccion: str, dudas: str):
+def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado: str, involucramiento: str, inversion_capital: str, nombre: str, correo: str, tipo_lead: str, estado_agendamiento: str):
     mensaje = MIMEMultipart("alternative")
     mensaje['From'] = f"Expansión Cosechas <{EMAIL_USER}>"
     
     # Usamos la variable de entorno
     mensaje['To'] = EMAIL_EXPANSION 
-    mensaje['Subject'] = "🚀 Nuevo Interesado en Franquicia Colombia"
+    mensaje['Subject'] = f"🚀 Nuevo Lead de Franquicia ({tipo_lead}) - {ciudad}"
+
+    # Estilo de color según el Lead
+    color_lead = "#ed1650" if tipo_lead == "A" else ("#f59e0b" if tipo_lead == "B" else "#64748b")
+    badge_lead = f"<span style='background-color: {color_lead}; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 18px;'>LEAD {tipo_lead}</span>"
 
     cuerpo_html = f"""
     <!DOCTYPE html>
@@ -196,9 +204,9 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, direccion: str, du
             .content {{ padding: 30px; }}
             .lead-box {{ background-color: #f7fee7; border-left: 5px solid #9eca3a; padding: 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }}
             .lead-box p {{ margin: 10px 0; font-size: 15px; }}
-            .highlight {{ font-weight: bold; color: #4d7c0f; display: inline-block; width: 130px; }}
-            .dudas-box {{ background-color: #ffffff; border: 1px solid #ecfccb; padding: 15px; border-radius: 8px; font-style: italic; color: #475569; }}
+            .highlight {{ font-weight: bold; color: #4d7c0f; display: inline-block; width: 150px; }}
             .footer {{ background-color: #f1f5f9; text-align: center; padding: 15px; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }}
+            .lead-score {{ text-align: center; margin: 20px 0; }}
         </style>
     </head>
     <body>
@@ -207,14 +215,27 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, direccion: str, du
                 <h2>🚀 Nuevo Prospecto de Franquicia</h2>
             </div>
             <div class="content">
-                <p>Hola, equipo de Expansión. Un nuevo prospecto ha completado el formulario a través del asistente virtual de WhatsApp.</p>
-                <div class="lead-box">
-                    <p><span class="highlight">📱 Celular:</span> {celular}</p>
-                    <p><span class="highlight">🌆 Ciudad:</span> {ciudad}</p>
-                    <p><span class="highlight">📍 Local:</span> {direccion}</p>
+                <p>Hola, equipo de Expansión. Un nuevo prospecto ha sido calificado a través del asistente virtual de WhatsApp.</p>
+                
+                <div class="lead-score">
+                    {badge_lead}
                 </div>
-                <h4 style="margin-bottom: 10px; color: #334155;">Dudas e Inquietudes:</h4>
-                <div class="dudas-box">"{dudas}"</div>
+
+                <div class="lead-box">
+                    <h3 style="margin-top: 0; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Datos de Contacto</h3>
+                    <p><span class="highlight">👤 Nombre:</span> {nombre}</p>
+                    <p><span class="highlight">📱 Celular:</span> {celular}</p>
+                    <p><span class="highlight">✉️ Correo:</span> {correo}</p>
+                    <p><span class="highlight">🌆 Ciudad:</span> {ciudad}</p>
+                    
+                    <h3 style="margin-top: 20px; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Perfil de Inversión</h3>
+                    <p><span class="highlight">💰 Capital ($130M):</span> {inversion_capital}</p>
+                    <p><span class="highlight">🤝 Involucramiento:</span> {involucramiento}</p>
+                    <p><span class="highlight">📍 Local visto:</span> {local_identificado}</p>
+                    
+                    <h3 style="margin-top: 20px; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Resolución del Bot</h3>
+                    <p><span class="highlight">📅 Agendamiento:</span> <strong>{estado_agendamiento}</strong></p>
+                </div>
             </div>
             <div class="footer">Generado automáticamente por el Bot de Cosechas</div>
         </div>
@@ -238,3 +259,63 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, direccion: str, du
         raise
     except Exception as e:
         print(f"❌ Error general al enviar correo de franquicia: {e}")
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
+def enviar_correo_hoja_vida(nombre: str, celular: str, url_pdf: str, ciudad: str):
+    mensaje = MIMEMultipart("alternative")
+    mensaje['From'] = f"Talento Humano Cosechas <{EMAIL_USER}>"
+    mensaje['To'] = "3113816216juanjose@gmail.com"
+    mensaje['Subject'] = f"📄 Nuevo Candidato Sede Corporativa - {nombre}"
+
+    cuerpo_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Montserrat', 'Century Gothic', Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }}
+            .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }}
+            .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 25px; text-align: center; }}
+            .header h2 {{ margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; font-family: 'Nunito', 'Century Gothic', sans-serif; }}
+            .content {{ padding: 30px; }}
+            .lead-box {{ background-color: #ecfdf5; border-left: 5px solid #10b981; padding: 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }}
+            .lead-box p {{ margin: 10px 0; font-size: 15px; }}
+            .highlight {{ font-weight: bold; color: #047857; display: inline-block; width: 130px; }}
+            .btn-action {{ display: inline-block; background-color: #10b981; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; margin-top: 15px; text-align: center; }}
+            .footer {{ background-color: #f1f5f9; text-align: center; padding: 15px; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>📄 Nuevo Candidato Corporativo</h2>
+            </div>
+            <div class="content">
+                <p>Hola, Talento Humano. Un nuevo candidato ha completado el formulario a través del asistente virtual de WhatsApp y ha adjuntado su hoja de vida.</p>
+                <div class="lead-box">
+                    <p><span class="highlight">👤 Nombre:</span> {nombre}</p>
+                    <p><span class="highlight">📱 Celular:</span> {celular}</p>
+                    <p><span class="highlight">🌆 Ciudad:</span> {ciudad}</p>
+                </div>
+                <center>
+                    <a href="{url_pdf}" class="btn-action">Descargar Hoja de Vida (PDF)</a>
+                </center>
+            </div>
+            <div class="footer">Generado automáticamente por el Bot de Cosechas</div>
+        </div>
+    </body>
+    </html>
+    """
+    mensaje.attach(MIMEText(cuerpo_html, 'html'))
+
+    try:
+        servidor = smtplib.SMTP('smtp.gmail.com', 587)
+        servidor.starttls()
+        servidor.login(EMAIL_USER, EMAIL_PASS)
+        servidor.sendmail(EMAIL_USER, ["3113816216juanjose@gmail.com"], mensaje.as_string())
+        servidor.quit()
+        print(f"✅ Correo de RRHH enviado exitosamente a: 3113816216juanjose@gmail.com")
+    except smtplib.SMTPException as e:
+        print(f"❌ Error SMTP al enviar correo de RRHH, se reintentará: {e}")
+        raise
+    except Exception as e:
+        print(f"❌ Error general al enviar correo de RRHH: {e}")
