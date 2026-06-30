@@ -62,18 +62,16 @@ def enviar_correo_pqrs_franquiciado(destinatario: str, radicado: str, tipo: str,
                 <div class="details-box">
                     <table class="details-table">
                         <tr><td width="35%"><span class="highlight">🎫 Radicado:</span></td><td width="65%"><strong>#{radicado}</strong></td></tr>
-                        <tr><td><span class="highlight">👤 Nombre:</span></td><td>{nombre_cliente}</td></tr>
-                        <tr><td><span class="highlight">📱 Contacto:</span></td><td>{celular}</td></tr>
-                        <tr><td><span class="highlight">✉️ Correo:</span></td><td>{correo_cliente}</td></tr>
                         <tr><td><span class="highlight">⚠️ Categoría:</span></td><td><span class="badge-alegria">{tipo}</span></td></tr>
                     </table>
                     <div class="detalle-texto">"{detalle}"</div>
                 </div>
 
                 <div class="alert-box">
-                    <strong>📌 Información del Caso:</strong><br><br>
-                    Le informamos que este caso ya está en manos de <strong>{nombre_area} Cosechas Máster</strong>. Nuestro equipo central se encargará de gestionar el reporte y comunicarse directamente con el cliente para brindarle una solución.<br><br>
-                    Si considera que debe aportar información adicional a este caso, puede contactarnos a través del siguiente botón:
+                    <strong style="color: #b91c1c;">⚠️ ACCIÓN OBLIGATORIA REQUERIDA</strong><br><br>
+                    Le informamos que este caso ha sido registrado en su tienda y reportado a <strong>{nombre_area} Cosechas Máster</strong>.<br><br>
+                    Para garantizar los estándares de servicio de la franquicia, <strong>ES DE CARÁCTER OBLIGATORIO</strong> que usted se comunique oportunamente con el Coordinador de Servicio al Cliente para gestionar este caso en un plazo <strong>MÁXIMO de 4 días hábiles</strong>.<br><br>
+                    Por favor, póngase en contacto a través del siguiente botón indicando su número de radicado:
                     <br>
                     <a href="mailto:{correo_interno}?subject={asunto_encoded}" class="btn-action">
                         Contactar a {nombre_area}

@@ -81,7 +81,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             pass
         return "Menú Principal 🥤. Por favor, abre la lista y elige una opción:", {
             "tipo": "lista", "boton": "Seleccionar Opción",
-            "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col", "Franquicias Ext"]
+            "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
         }, None
 
     if texto in ["finalizar", "terminar", "cerrar", "gracias", "chao", "adios"] and estado_actual != "menu_principal":
@@ -118,7 +118,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "¡Perfecto! Gracias por confiar en nosotros. Por favor, despliega la lista y selecciona cómo te podemos ayudar hoy:"
             botones_bot = {
                 "tipo": "lista", "boton": "Opciones Cosechas",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col", "Franquicias Ext"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
             }
         elif texto == "rechazar":
             estado_actual = "menu_principal"
@@ -132,7 +132,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "Menú Principal 🥤. Por favor, selecciona una opción de la lista:"
             botones_bot = {
                 "tipo": "lista", "boton": "Opciones Cosechas",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col", "Franquicias Ext"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
             }
             
         elif texto == "menú y precios":
@@ -167,7 +167,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto == "hoja de vida":
             estado_actual = "esperando_area_trabajo"
             respuesta_bot = "¿Dónde te gustaría trabajar? Selecciona el área de tu interés:"
-            botones_bot = ["Punto de Venta", "Sede Corporativa"]
+            botones_bot = ["Punto de Venta", "Operativo"]
 
         elif texto == "franquicias col" or texto == "franquicias colombia":
             estado_actual = "esperando_nombre_franquicia"
@@ -178,20 +178,11 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             )
             botones_bot = ["Volver"]
 
-        elif texto == "franquicias ext" or texto == "franquicias exterior" or texto == "franquicias otros paises":
-            respuesta_bot = (
-                "¡Hola! Gracias por escribirnos y por tu gran interés en expandir la familia Cosechas a nuevos horizontes. 🌍\n\n"
-                "Para conocer todos los detalles sobre nuestro modelo internacional y contactar directamente a nuestro equipo de casa matriz, te invitamos a visitar nuestra página web oficial:\n\n"
-                "👉 *www.cosechas.com*\n\n"
-                "¡Mucho éxito con tu proyecto! ¿Deseas consultar algo más? 🌱"
-            )
-            botones_bot = ["Volver", "Finalizar"]
-
         else:
             respuesta_bot = "⚠️ No logré entender eso. Por favor, selecciona una de las siguientes opciones desde el botón:"
             botones_bot = {
                 "tipo": "lista", "boton": "Ver Opciones",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col", "Franquicias Ext"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
             }
 
     elif estado_actual == "esperando_ubicacion":
@@ -709,19 +700,18 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             estado_actual = "menu_opciones"
             datos_pqrs = {}
             respuesta_bot = (
-                "Entendido. Cada punto de venta realiza sus contrataciones de forma independiente.\n\n"
-                "👉 Te recomendamos acercarte a la tienda de tu interés con tu hoja de vida impresa para hablar directamente con el franquiciado.\n\n"
+                "Entendido. Te informamos que cada punto de venta realiza sus contrataciones de forma independiente, por lo que debes acercarte al punto que quieras o más te sirva y entregar allí tu hoja de vida impresa.\n\n"
                 "¡Mucho éxito en tu búsqueda! 🌱"
             )
             botones_bot = ["Volver", "Finalizar"]
-        elif texto in ["sede corporativa", "sede corporativa "]:
+        elif texto in ["operativo", "operativo "]:
             estado_actual = "esperando_ciudad_corporativo"
-            datos_pqrs["tipo_empleo"] = "Corporativo"
-            respuesta_bot = "¡Excelente elección! Buscamos talento para nuestra sede principal.\n\nPor favor, indícanos desde qué ciudad te postulas:"
-            botones_bot = ["Medellín", "Bogotá"]
+            datos_pqrs["tipo_empleo"] = "Operativo"
+            respuesta_bot = "¡Excelente elección!\n\nPor favor, indícanos desde qué ciudad te postulas:"
+            botones_bot = ["Medellín", "Bogotá"] # They can type another city, but buttons suggest Medellín and Bogotá
         else:
             respuesta_bot = "⚠️ Opción no reconocida. Por favor, selecciona una:"
-            botones_bot = ["Punto de Venta", "Sede Corporativa"]
+            botones_bot = ["Punto de Venta", "Operativo"]
 
     elif estado_actual == "esperando_ciudad_corporativo":
         if texto in ["medellín", "medellin", "bogotá", "bogota"]:
@@ -730,15 +720,34 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "Entendido. Ahora por favor, escribe tu *Nombre Completo*:"
             botones_bot = ["Volver"]
         else:
-            respuesta_bot = "⚠️ Ciudad no reconocida. Por favor, selecciona una de las opciones:"
-            botones_bot = ["Medellín", "Bogotá"]
+            datos_pqrs["ciudad_corporativo"] = texto_usuario
+            estado_actual = "confirmando_ciudad_corporativo"
+            respuesta_bot = (
+                "⚠️ Te informamos que actualmente solo contamos con centros operativos en Medellín y Bogotá.\n\n"
+                "¿Aún estás interesado(a) en continuar con tu postulación?"
+            )
+            botones_bot = ["Sí", "No"]
+
+    elif estado_actual == "confirmando_ciudad_corporativo":
+        if texto in ["sí", "si", "si estoy interesado"]:
+            estado_actual = "esperando_nombre_corporativo"
+            respuesta_bot = "¡Perfecto! Ahora por favor, escribe tu *Nombre Completo*:"
+            botones_bot = ["Volver"]
+        elif texto in ["no", "ya no"]:
+            estado_actual = "menu_opciones"
+            datos_pqrs = {}
+            respuesta_bot = "Entendido. ¡Gracias por tu interés en Cosechas y mucho éxito en tu búsqueda laboral! 🌱"
+            botones_bot = ["Volver", "Finalizar"]
+        else:
+            respuesta_bot = "⚠️ Opción no reconocida. ¿Aún estás interesado(a) en continuar?"
+            botones_bot = ["Sí", "No"]
 
     elif estado_actual == "esperando_nombre_corporativo":
         datos_pqrs["nombre_candidato"] = texto_usuario
         estado_actual = "esperando_cv_corporativo"
         respuesta_bot = (
             f"Gracias, {texto_usuario.split()[0].capitalize()}.\n\n"
-            "Para completar tu postulación a Sede Corporativa, necesitamos tu Hoja de Vida. 📄\n\n"
+            "Para completar tu postulación al área Operativa, necesitamos tu Hoja de Vida. 📄\n\n"
             "Por favor, *adjunta y envía tu Hoja de Vida en formato PDF o Imagen* ahora mismo aquí en el chat."
         )
         botones_bot = ["Volver"]
