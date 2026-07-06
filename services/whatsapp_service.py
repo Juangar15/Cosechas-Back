@@ -1,6 +1,8 @@
 import httpx
 import uuid
-from config import WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, supabase
+import boto3
+from datetime import datetime
+from config import WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, supabase, APP_ENV, R2_ACCOUNT_ID, R2_ACCESS_KEY, R2_SECRET_KEY, R2_BUCKET_PUBLIC, R2_PUBLIC_URL
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 def log_retry(retry_state):
@@ -184,14 +186,27 @@ async def procesar_imagen_whatsapp(media_id: str) -> str:
                 
             contenido_archivo = res_img.content
         
+        fecha_actual = datetime.now()
+        mes_anio = fecha_actual.strftime("%Y-%m")
         nombre_unico = f"evidencia_wp_{uuid.uuid4()}.jpg"
-        supabase.storage.from_("evidencias-pqrs").upload(
-            path=nombre_unico,
-            file=contenido_archivo,
-            file_options={"content-type": "image/jpeg"}
+        ruta_s3 = f"{APP_ENV}/whatsapp-pqrs/{mes_anio}/{nombre_unico}"
+        
+        s3 = boto3.client(
+            's3',
+            endpoint_url=f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+            aws_access_key_id=R2_ACCESS_KEY,
+            aws_secret_access_key=R2_SECRET_KEY,
+            region_name='auto'
         )
         
-        return supabase.storage.from_("evidencias-pqrs").get_public_url(nombre_unico)
+        s3.put_object(
+            Bucket=R2_BUCKET_PUBLIC,
+            Key=ruta_s3,
+            Body=contenido_archivo,
+            ContentType="image/jpeg"
+        )
+        
+        return f"{R2_PUBLIC_URL}/{ruta_s3}"
         
     except httpx.RequestError as e:
         print("Error de red procesando imagen desde WhatsApp:", e)
@@ -224,19 +239,27 @@ async def procesar_documento_whatsapp(media_id: str, mime_type: str = "applicati
             contenido_archivo = res_img.content
         
         extension = ".pdf" if "pdf" in mime_type.lower() else ".bin"
+        fecha_actual = datetime.now()
+        mes_anio = fecha_actual.strftime("%Y-%m")
         nombre_unico = f"cv_corporativo_{uuid.uuid4()}{extension}"
+        ruta_s3 = f"{APP_ENV}/hojas-de-vida/{mes_anio}/{nombre_unico}"
         
-        # Subir al bucket de hojas_de_vida o a evidencias-pqrs si no hay otro creado
-        # Para evitar que falle si no crearon el bucket, intentaremos usar evidencias-pqrs por defecto si es necesario,
-        # pero idealmente debería existir "hojas-de-vida". Asumamos "evidencias-pqrs" por ahora para evitar crasheos,
-        # o sugerir crear "hojas-de-vida". Lo guardaremos en evidencias-pqrs para asegurar funcionalidad sin crear más buckets.
-        supabase.storage.from_("evidencias-pqrs").upload(
-            path=nombre_unico,
-            file=contenido_archivo,
-            file_options={"content-type": mime_type}
+        s3 = boto3.client(
+            's3',
+            endpoint_url=f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+            aws_access_key_id=R2_ACCESS_KEY,
+            aws_secret_access_key=R2_SECRET_KEY,
+            region_name='auto'
         )
         
-        return supabase.storage.from_("evidencias-pqrs").get_public_url(nombre_unico)
+        s3.put_object(
+            Bucket=R2_BUCKET_PUBLIC,
+            Key=ruta_s3,
+            Body=contenido_archivo,
+            ContentType=mime_type
+        )
+        
+        return f"{R2_PUBLIC_URL}/{ruta_s3}"
         
     except httpx.RequestError as e:
         print("Error de red procesando documento desde WhatsApp:", e)
