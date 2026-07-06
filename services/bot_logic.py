@@ -87,15 +87,16 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
     despedidas = ["finalizar", "terminar", "cerrar", "chao", "adios", "hasta luego", "salir"]
     es_despedida = any(palabra in texto for palabra in despedidas) or "gracias" in texto
 
-    if es_despedida and estado_actual != "menu_principal":
-        estado_actual = "menu_principal"
-        datos_pqrs = {}
-        try:
-            supabase.table("sesiones_bot").update({
-                "estado": estado_actual, "datos_pqrs": datos_pqrs, "fecha_actualizacion": datetime.now(timezone.utc).isoformat()
-            }).eq("celular", celular).execute()
-        except Exception as e:
-            pass
+    if es_despedida:
+        if estado_actual != "menu_principal":
+            estado_actual = "menu_principal"
+            datos_pqrs = {}
+            try:
+                supabase.table("sesiones_bot").update({
+                    "estado": estado_actual, "datos_pqrs": datos_pqrs, "fecha_actualizacion": datetime.now(timezone.utc).isoformat()
+                }).eq("celular", celular).execute()
+            except Exception as e:
+                pass
         return "¡Con gusto! Sesión finalizada con éxito. Cuando desees comunicarte nuevamente con Cosechas, solo escribe 'Hola'. ¡Que tengas un feliz día! 🌱🥤", None, None
 
     respuesta_bot = "Lo siento, ocurrió un error interno. Escribe 'Hola' para reiniciar."

@@ -60,6 +60,22 @@ async def recibir_mensajes_whatsapp_real(background_tasks: BackgroundTasks, payl
                             if len(mensajes_procesados) > 5000:
                                 mensajes_procesados.clear()
                                 
+                        # --- IGNORAR MENSAJES ANTIGUOS ---
+                        # Si el servidor se cae, Meta encola los mensajes. Al volver a prenderlo,
+                        # ignoraremos todo mensaje que tenga más de 2 minutos (120 segundos) de antigüedad.
+                        import time
+                        timestamp_str = mensaje_data.get("timestamp")
+                        if timestamp_str:
+                            try:
+                                timestamp_msj = int(timestamp_str)
+                                tiempo_actual = int(time.time())
+                                diferencia_segundos = tiempo_actual - timestamp_msj
+                                if diferencia_segundos > 120:
+                                    print(f"⏳ Mensaje antiguo ignorado ({diferencia_segundos}s de retraso)")
+                                    continue
+                            except ValueError:
+                                pass
+                                
                         celular_cliente = mensaje_data.get("from")
                         texto_cliente = ""
                         
