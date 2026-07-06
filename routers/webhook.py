@@ -8,6 +8,9 @@ import asyncio
 
 router = APIRouter(tags=["webhook"])
 
+# Cache en memoria para evitar procesar mensajes duplicados de Meta
+mensajes_procesados = set()
+
 @router.get("/webhook")
 async def verificar_webhook_meta(request: Request):
     params = request.query_params
@@ -45,6 +48,18 @@ async def recibir_mensajes_whatsapp_real(background_tasks: BackgroundTasks, payl
                     value = change.get("value", {})
                     if "messages" in value:
                         mensaje_data = value["messages"][0]
+                        mensaje_id = mensaje_data.get("id")
+                        
+                        # Evitar duplicados (Retries de Meta)
+                        if mensaje_id:
+                            if mensaje_id in mensajes_procesados:
+                                print(f"⚠️ Mensaje duplicado ignorado: {mensaje_id}")
+                                continue
+                            mensajes_procesados.add(mensaje_id)
+                            # Limpiar cache si crece mucho
+                            if len(mensajes_procesados) > 5000:
+                                mensajes_procesados.clear()
+                                
                         celular_cliente = mensaje_data.get("from")
                         texto_cliente = ""
                         
