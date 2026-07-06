@@ -84,7 +84,10 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
         }, None
 
-    if texto in ["finalizar", "terminar", "cerrar", "gracias", "chao", "adios"] and estado_actual != "menu_principal":
+    despedidas = ["finalizar", "terminar", "cerrar", "chao", "adios", "hasta luego", "salir"]
+    es_despedida = any(palabra in texto for palabra in despedidas) or "gracias" in texto
+
+    if es_despedida and estado_actual != "menu_principal":
         estado_actual = "menu_principal"
         datos_pqrs = {}
         try:

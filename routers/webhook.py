@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Request, HTTPException, Body
+from fastapi import APIRouter, Request, HTTPException, Body, BackgroundTasks
 from fastapi.responses import PlainTextResponse
 from config import WHATSAPP_VERIFY_TOKEN
 from models import MensajePrueba
 from services.bot_logic import procesar_mensaje_inteligente
 from services.whatsapp_service import procesar_imagen_whatsapp, procesar_documento_whatsapp, enviar_documento_whatsapp, enviar_mensaje_whatsapp
+import asyncio
 
 router = APIRouter(tags=["webhook"])
 
@@ -18,8 +19,25 @@ async def verificar_webhook_meta(request: Request):
         return PlainTextResponse(content=challenge, status_code=200)
     raise HTTPException(status_code=403, detail="Token inválido.")
 
+async def procesar_y_responder(texto_cliente, celular_cliente):
+    print(f"\n📲 PROCESANDO EN BACKGROUND -> REMITENTE: {celular_cliente} | VALOR: {texto_cliente}")
+    try:
+        respuesta_bot, botones_bot, documento_bot = procesar_mensaje_inteligente(texto_cliente, celular_cliente)
+        if documento_bot:
+            await enviar_documento_whatsapp(
+                celular_destino=celular_cliente, 
+                url_documento=documento_bot["url"], 
+                nombre_archivo=documento_bot["nombre"],
+                texto_mensaje=respuesta_bot,
+                botones=botones_bot
+            )
+        else:
+            await enviar_mensaje_whatsapp(celular_cliente, respuesta_bot, botones_bot)
+    except Exception as e:
+        print("Error en procesar_y_responder:", e)
+
 @router.post("/webhook")
-async def recibir_mensajes_whatsapp_real(payload: dict = Body(...)):
+async def recibir_mensajes_whatsapp_real(background_tasks: BackgroundTasks, payload: dict = Body(...)):
     try:
         if payload.get("object") == "whatsapp_business_account":
             for entry in payload.get("entry", []):
@@ -40,13 +58,10 @@ async def recibir_mensajes_whatsapp_real(payload: dict = Body(...)):
                                 texto_cliente = mensaje_data["interactive"]["button_reply"]["title"]
                                 
                             elif interactive_type == "list_reply":
-                                # --- NUEVO: INTERCEPTOR HÍBRIDO (ID OCULTO VS TEXTO) ---
                                 reply_id = mensaje_data["interactive"]["list_reply"].get("id", "")
                                 if reply_id.startswith("nit_"):
-                                    # Si es una selección de sede, mandamos el ID oculto (ej: nit_900123456)
                                     texto_cliente = reply_id
                                 else:
-                                    # Para los demás menús, seguimos mandando el título visible (ej: "Radicar PQRS")
                                     texto_cliente = mensaje_data["interactive"]["list_reply"].get("title", "")
                                 
                         elif mensaje_data.get("type") == "image":
@@ -60,26 +75,13 @@ async def recibir_mensajes_whatsapp_real(payload: dict = Body(...)):
                             url_publica = await procesar_documento_whatsapp(media_id, mime_type)
                             texto_cliente = f"[DOCUMENTO_URL]:{url_publica}"
 
-                        # --- INTERCEPTOR DE UBICACIÓN GPS ---
                         elif mensaje_data.get("type") == "location":
                             lat = mensaje_data["location"]["latitude"]
                             lon = mensaje_data["location"]["longitude"]
                             texto_cliente = f"[UBICACION]:{lat},{lon}"
 
                         if texto_cliente:
-                            print(f"\n📲 EVENTO RECIBIDO -> REMITENTE: {celular_cliente} | VALOR: {texto_cliente}")
-                            respuesta_bot, botones_bot, documento_bot = procesar_mensaje_inteligente(texto_cliente, celular_cliente)
-                            
-                            if documento_bot:
-                                await enviar_documento_whatsapp(
-                                    celular_destino=celular_cliente, 
-                                    url_documento=documento_bot["url"], 
-                                    nombre_archivo=documento_bot["nombre"],
-                                    texto_mensaje=respuesta_bot,
-                                    botones=botones_bot
-                                )
-                            else:
-                                await enviar_mensaje_whatsapp(celular_cliente, respuesta_bot, botones_bot)
+                            background_tasks.add_task(procesar_y_responder, texto_cliente, celular_cliente)
                             
         return {"status": "success"}
     except Exception as e:
