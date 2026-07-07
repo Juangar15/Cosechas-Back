@@ -423,18 +423,17 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     "Para avanzar, por favor escribe el *Documento de Identidad* (Cédula o NIT) de quien solicita la factura:"
                 )
                 botones_bot = ["Volver"]
-                return respuesta_bot, botones_bot, None
-
-            # Revertir la normalización de la tilde al capitalizar
-            novedad_text = texto_usuario
-            if texto in ["presentacion sede", "presentación sede"]: novedad_text = "Presentación establecimiento"
-            if texto == "preparacion": novedad_text = "Preparación"
-            if texto in ["presentacion producto", "presentación producto"]: novedad_text = "Presentación del producto"
-            
-            datos_pqrs["tipo"] = novedad_text.capitalize() if novedad_text not in ["Presentación establecimiento", "Presentación del producto"] else novedad_text
-            estado_actual = "esperando_nombre_pqrs"
-            respuesta_bot = "Entendido. Para brindarte una atención personalizada, por favor escríbeme tu *Nombre Completo*:\n\n*(Si deseas cancelar, toca 'Volver')*"
-            botones_bot = ["Volver"]
+            else:
+                # Revertir la normalización de la tilde al capitalizar
+                novedad_text = texto_usuario
+                if texto in ["presentacion sede", "presentación sede"]: novedad_text = "Presentación establecimiento"
+                if texto == "preparacion": novedad_text = "Preparación"
+                if texto in ["presentacion producto", "presentación producto"]: novedad_text = "Presentación del producto"
+                
+                datos_pqrs["tipo"] = novedad_text.capitalize() if novedad_text not in ["Presentación establecimiento", "Presentación del producto"] else novedad_text
+                estado_actual = "esperando_nombre_pqrs"
+                respuesta_bot = "Entendido. Para brindarte una atención personalizada, por favor escríbeme tu *Nombre Completo*:\n\n*(Si deseas cancelar, toca 'Volver')*"
+                botones_bot = ["Volver"]
         else:
             respuesta_bot = "⚠️ Novedad no reconocida. Por favor selecciona una opción de la lista:"
             mot = datos_pqrs.get("motivo", "").lower()
