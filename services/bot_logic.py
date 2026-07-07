@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from config import supabase, EMAIL_USER, EMAIL_JEFE, EMAIL_COORD_SAC, EMAIL_CAPACITADORA, EMAIL_SISTEMAS, EMAIL_GERENCIA_JURIDICA
+from config import supabase, EMAIL_USER, EMAIL_JEFE, EMAIL_COORD_SAC, EMAIL_CAPACITADORA, EMAIL_SISTEMAS, EMAIL_GERENCIA_JURIDICA, R2_PUBLIC_URL
 from services.email_service import enviar_correo_pqrs_franquiciado, enviar_correo_pqrs_interno, enviar_correo_nueva_franquicia, enviar_correo_hoja_vida
 from services.location_service import encontrar_sede_mas_cercana
 from services.location_service import encontrar_sede_mas_cercana
@@ -103,18 +103,15 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
 
     # --- PASO B: MÁQUINA DE ESTADOS LÓGICOS ---
     if estado_actual == "menu_principal":
-        if "hola" in texto or "menu" in texto:
-            estado_actual = "esperando_terminos"
-            respuesta_bot = (
-                "¡Hola! Bienvenido al asistente virtual de Cosechas 🥤.\n\n"
-                "Para garantizar la seguridad de tus datos, "
-                "por favor conoce nuestra Política de Tratamiento de Datos aquí:\n"
-                "👉 https://www.cosechasexpress.com/politica-de-tratamiento-de-datos/\n\n"
-                "¿Aceptas la política para continuar?"
-            )
-            botones_bot = ["Aceptar", "Rechazar"]
-        else:
-            respuesta_bot = "¡Hola! Por favor escribe 'Hola' para iniciar el asistente de Cosechas."
+        estado_actual = "esperando_terminos"
+        respuesta_bot = (
+            "¡Hola! Bienvenido al asistente virtual de Cosechas 🥤.\n\n"
+            "Para garantizar la seguridad de tus datos, "
+            "por favor conoce nuestra Política de Tratamiento de Datos aquí:\n"
+            "👉 https://www.cosechasexpress.com/politica-de-tratamiento-de-datos/\n\n"
+            "¿Aceptas la política para continuar?"
+        )
+        botones_bot = ["Aceptar", "Rechazar"]
 
     elif estado_actual == "esperando_terminos":
         if texto == "aceptar":
@@ -143,12 +140,13 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             estado_actual = "esperando_tipo_menu"
             respuesta_bot = (
                 "¡Excelente elección! 🥤\n"
-                "Para brindarte una mejor experiencia, contamos con nuestras cartas en Español e Inglés.\n\n"
+                "Para brindarte una mejor experiencia, contamos con nuestras cartas en Español e Inglés.\n"
+                "*(Recuerda que aeropuertos y otras poblaciones como Leticia cuentan con un precio diferente)*\n\n"
                 "Por favor, abre la lista y selecciona el menú que deseas consultar:"
             )
             botones_bot = {
                 "tipo": "lista", "boton": "Ver Menús",
-                "opciones": ["Nacional (ES)", "National (EN)", "Aeropuerto (ES)", "Airport (EN)"]
+                "opciones": ["Nacional (ES)", "National (EN)", "Aeropuertos/Leticia", "Airports/Others EN"]
             }
             
         elif texto == "radicar pqrs":
@@ -230,7 +228,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     respuesta_bot = "Lo siento, en este momento no tenemos sedes registradas en nuestro sistema. 😔\n¿Deseas consultar algo más?"
                     
                 estado_actual = "menu_opciones"
-                botones_bot = ["Volver", "Finalizar"]
+                botones_bot = ["Menú y Precios", "Volver", "Finalizar"]
                 
             except Exception as e:
                 print(f"Error procesando ubicación: {e}")
@@ -244,38 +242,38 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         if texto == "nacional (es)": 
             estado_actual = "menu_opciones"
             documento_bot = {
-                "url": "https://wfvjzahmxzzjtyimkfcr.supabase.co/storage/v1/object/public/cartas-cosechas/MENU%20DIGITAL.pdf",
+                "url": f"{R2_PUBLIC_URL}/cartas/MENU_DIGITAL_ES.pdf",
                 "nombre": "Carta_Nacional_ES_Cosechas.pdf"
             }
             respuesta_bot = "📄 Aquí tienes nuestra carta Nacional en Español.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Volver", "Finalizar"]
+            botones_bot = ["Domicilios", "Volver", "Finalizar"]
 
         elif texto == "national (en)": 
             estado_actual = "menu_opciones"
             documento_bot = {
-                "url": "https://wfvjzahmxzzjtyimkfcr.supabase.co/storage/v1/object/public/cartas-cosechas/MENU%20DIGITAL%20INGLES.pdf",
+                "url": f"{R2_PUBLIC_URL}/cartas/MENU_DIGITAL_EN.pdf",
                 "nombre": "National_Menu_EN_Cosechas.pdf"
             }
             respuesta_bot = "📄 Here is our National Menu in English.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Volver", "Finalizar"]
+            botones_bot = ["Domicilios", "Volver", "Finalizar"]
 
-        elif texto == "aeropuerto (es)": 
+        elif texto == "aeropuertos/leticia" or texto == "aeropuerto": 
             estado_actual = "menu_opciones"
             documento_bot = {
-                "url": "https://wfvjzahmxzzjtyimkfcr.supabase.co/storage/v1/object/public/cartas-cosechas/MENU%20DIGITAL%20Aeropuerto.pdf",
+                "url": f"{R2_PUBLIC_URL}/cartas/MENU_AEROPUERTOS_ES.pdf",
                 "nombre": "Carta_Aeropuertos_ES_Cosechas.pdf"
             }
-            respuesta_bot = "📄 Aquí tienes nuestra carta para Aeropuertos en Español.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Volver", "Finalizar"]
+            respuesta_bot = "📄 Aquí tienes nuestra carta para Aeropuertos y Leticia en Español.\n\n¿Deseas consultar algo más?"
+            botones_bot = ["Domicilios", "Volver", "Finalizar"]
 
-        elif texto == "airport (en)": 
+        elif texto == "airports/others en": 
             estado_actual = "menu_opciones"
             documento_bot = {
-                "url": "https://wfvjzahmxzzjtyimkfcr.supabase.co/storage/v1/object/public/cartas-cosechas/MENU%20DIGITAL%20Aeropuerto%20INGLES.pdf",
+                "url": f"{R2_PUBLIC_URL}/cartas/MENU_AEROPUERTOS_EN.pdf",
                 "nombre": "Airports_Menu_EN_Cosechas.pdf"
             }
             respuesta_bot = "📄 Here is our Airport Menu in English.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Volver", "Finalizar"]
+            botones_bot = ["Domicilios", "Volver", "Finalizar"]
 
         else:
             respuesta_bot = "⚠️ Opción inválida. Por favor, abre la lista y selecciona uno de los menús disponibles:"
