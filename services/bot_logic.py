@@ -150,9 +150,9 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             }
             
         elif texto == "radicar pqrs":
-            estado_actual = "esperando_nit"
-            respuesta_bot = "Para direccionar tu queja, escribe el *NIT* de la factura (ej: 900111222). Si no tienes la factura a la mano, toca 'No tengo NIT'."
-            botones_bot = ["No tengo NIT", "Volver"]
+            estado_actual = "esperando_barrio_pqrs"
+            respuesta_bot = "Para direccionar tu queja, escribe la *Ciudad y Barrio* donde ocurrió el suceso:"
+            botones_bot = ["Sedes Generales", "Volver"]
             
         elif texto == "domicilios":
             estado_actual = "esperando_ubicacion"
@@ -169,7 +169,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto == "hoja de vida":
             estado_actual = "esperando_area_trabajo"
             respuesta_bot = "¿Dónde te gustaría trabajar? Selecciona el área de tu interés:"
-            botones_bot = ["Punto de Venta", "Operativo"]
+            botones_bot = ["Punto de Venta", "Planta Cosechas"]
 
         elif texto == "franquicias col" or texto == "franquicias colombia":
             estado_actual = "esperando_nombre_franquicia"
@@ -195,7 +195,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "👉 https://www.cosechasexpress.com/encuentranos/\n\n"
                 "¿Deseas consultar algo más?"
             )
-            botones_bot = ["Volver", "Finalizar"]
+            botones_bot = ["Menú Principal", "Finalizar"]
             
         elif "[ubicacion]:" in texto:
             try:
@@ -228,7 +228,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     respuesta_bot = "Lo siento, en este momento no tenemos sedes registradas en nuestro sistema. 😔\n¿Deseas consultar algo más?"
                     
                 estado_actual = "menu_opciones"
-                botones_bot = ["Menú y Precios", "Volver", "Finalizar"]
+                botones_bot = ["Menú y Precios", "Menú Principal", "Finalizar"]
                 
             except Exception as e:
                 print(f"Error procesando ubicación: {e}")
@@ -246,7 +246,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "nombre": "Carta_Nacional_ES_Cosechas.pdf"
             }
             respuesta_bot = "📄 Aquí tienes nuestra carta Nacional en Español.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Domicilios", "Volver", "Finalizar"]
+            botones_bot = ["Domicilios", "Menú Principal", "Finalizar"]
 
         elif texto == "national (en)": 
             estado_actual = "menu_opciones"
@@ -255,7 +255,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "nombre": "National_Menu_EN_Cosechas.pdf"
             }
             respuesta_bot = "📄 Here is our National Menu in English.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Domicilios", "Volver", "Finalizar"]
+            botones_bot = ["Domicilios", "Menú Principal", "Finalizar"]
 
         elif texto == "aeropuertos/leticia" or texto == "aeropuerto": 
             estado_actual = "menu_opciones"
@@ -264,7 +264,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "nombre": "Carta_Aeropuertos_ES_Cosechas.pdf"
             }
             respuesta_bot = "📄 Aquí tienes nuestra carta para Aeropuertos y Leticia en Español.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Domicilios", "Volver", "Finalizar"]
+            botones_bot = ["Domicilios", "Menú Principal", "Finalizar"]
 
         elif texto == "airports/others en": 
             estado_actual = "menu_opciones"
@@ -273,7 +273,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "nombre": "Airports_Menu_EN_Cosechas.pdf"
             }
             respuesta_bot = "📄 Here is our Airport Menu in English.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Domicilios", "Volver", "Finalizar"]
+            botones_bot = ["Domicilios", "Menú Principal", "Finalizar"]
 
         else:
             respuesta_bot = "⚠️ Opción inválida. Por favor, abre la lista y selecciona uno de los menús disponibles:"
@@ -288,38 +288,6 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             estado_actual = "esperando_barrio_pqrs"
             respuesta_bot = "No te preocupes. Por favor, escríbeme en qué *ciudad y barrio* o zona se encuentra la tienda (ejemplo: 'Medellín Laureles' o 'Bogotá Chapinero'):"
             botones_bot = ["Sedes Generales", "Volver"]
-        else:
-            # --- NUEVO: INTERCEPTOR Y NORMALIZADOR DE NIT ---
-            import re
-            
-            # 1. Extraemos solo los números de lo que escribió el cliente
-            solo_numeros = re.sub(r'\D', '', texto)
-            
-            # 2. Le aplicamos el mismo formato con puntos del Frontend (Ej: 900111222 -> 900.111.222)
-            nit_formateado = texto # Por si acaso escribió letras, lo dejamos igual por defecto
-            if solo_numeros:
-                nit_formateado = "{:,}".format(int(solo_numeros)).replace(',', '.')
-                
-            # 3. Buscamos en Supabase de forma TRIPLE usando un "OR"
-            # Buscará: El texto crudo OR el texto con puntos OR el texto solo números
-            filtro_triple = f"tercero_nit.eq.{texto},tercero_nit.eq.{nit_formateado},tercero_nit.eq.{solo_numeros}"
-            
-            respuesta_db = supabase.table("sedes_oficiales").select("*").or_(filtro_triple).execute()
-            # ------------------------------------------------
-            
-            if len(respuesta_db.data) > 0:
-                franquicia = respuesta_db.data[0]
-                datos_pqrs["nit"] = franquicia["tercero_nit"]
-                datos_pqrs["local"] = franquicia["ceco_nombre"]
-                datos_pqrs["correo_franquiciado"] = franquicia.get("admin_correo") or EMAIL_USER 
-                
-                estado_actual = "esperando_tipo_reporte"
-                respuesta_bot = f"✅ Sede identificada: {franquicia['ceco_nombre']}.\n\n¿Qué tipo de reporte deseas realizar?"
-                botones_bot = ["Inconformidad", "Sugerencia", "Felicitación"]
-            else:
-                respuesta_bot = "⚠️ El NIT o número ingresado no existe en nuestra base de datos. Por favor, revísalo y escríbelo de nuevo, o toca el botón para buscar por barrio:"
-                botones_bot = ["No tengo NIT", "Volver"]
-
     elif estado_actual == "esperando_barrio_pqrs":
         if texto == "sedes generales":
             datos_pqrs["nit"] = None 
@@ -446,6 +414,17 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             "factura electrónica", "factura electronica", "disponibilidad carta", "preparación", "preparacion", "objeto en el producto", "presentación producto", "presentacion producto"
         ]
         if texto in opciones_validas:
+            # Flujo Excepcional: Factura Electrónica
+            if texto in ["factura electrónica", "factura electronica"]:
+                datos_pqrs["tipo"] = "Factura electrónica"
+                estado_actual = "esperando_doc_factura"
+                respuesta_bot = (
+                    "Recuerda que la factura electrónica debe ser solicitada en el mismo mes de la compra.\n\n"
+                    "Para avanzar, por favor escribe el *Documento de Identidad* (Cédula o NIT) de quien solicita la factura:"
+                )
+                botones_bot = ["Volver"]
+                return respuesta_bot, botones_bot, None
+
             # Revertir la normalización de la tilde al capitalizar
             novedad_text = texto_usuario
             if texto in ["presentacion sede", "presentación sede"]: novedad_text = "Presentación establecimiento"
@@ -465,6 +444,75 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Preparación", "Objeto en el producto", "Presentación producto"]}
             else:
                 botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto"]}
+
+    elif estado_actual == "esperando_doc_factura":
+        datos_pqrs["documento_factura"] = texto_usuario
+        estado_actual = "esperando_correo_factura"
+        respuesta_bot = "Entendido. Ahora por favor escríbeme el *Correo Electrónico* donde deseas recibir la factura (obligatorio):"
+        botones_bot = ["Volver"]
+
+    elif estado_actual == "esperando_correo_factura":
+        datos_pqrs["correo_cliente"] = texto_usuario
+        estado_actual = "esperando_nombre_factura"
+        respuesta_bot = "Gracias. Por favor escríbeme el *Nombre Completo* o *Razón Social* para la factura:"
+        botones_bot = ["Volver"]
+
+    elif estado_actual == "esperando_nombre_factura":
+        datos_pqrs["nombre_cliente"] = texto_usuario
+        estado_actual = "esperando_foto_factura"
+        respuesta_bot = (
+            "Finalmente, debes adjuntar obligatoriamente una foto de la *tirilla de compra* (factura física).\n"
+            "Si no la tienes, debes acercarte al punto de venta y solicitarla ya que para este proceso es estrictamente necesaria.\n\n"
+            "(📸 *Envía la foto de la tirilla* ahora mismo aquí en el chat)."
+        )
+        botones_bot = ["No tengo la foto", "Volver"]
+
+    elif estado_actual == "esperando_foto_factura":
+        if texto == "no tengo la foto" or ("[imagen_url]:" not in texto and "[documento_url]:" not in texto):
+            estado_actual = "menu_opciones"
+            datos_pqrs = {}
+            respuesta_bot = "⚠️ Sin la foto de la tirilla de compra no podemos procesar la solicitud. Debes acercarte al punto de venta y solicitarla ya que para este proceso es necesaria.\n\nEl proceso ha sido cancelado."
+            botones_bot = ["Menú Principal", "Finalizar"]
+        else:
+            tiene_foto = texto.split("]:")[1] if "]:" in texto else texto
+            
+            correo_f = datos_pqrs.get("correo_franquiciado", EMAIL_USER)
+            local_nombre = datos_pqrs.get("local", "Cosechas")
+            nit_guardar = datos_pqrs.get("nit")
+            nombre_cliente = datos_pqrs.get("nombre_cliente", "No especificado")
+            correo_cliente = datos_pqrs.get("correo_cliente", "No especificado")
+            documento = datos_pqrs.get("documento_factura", "")
+            
+            detalle = f"Solicitud de Facturación Electrónica.\nDocumento/NIT: {documento}"
+            numero_radicado = "PENDIENTE"
+            
+            try:
+                respuesta_insert = supabase.table("tickets_pqrs").insert({
+                    "celular_cliente": celular, "nit_franquiciado": nit_guardar, "nombre_franquicia": local_nombre,
+                    "tipo_reporte": "Sugerencia", "motivo": "Servicio",
+                    "tipo_novedad": "Factura electrónica", "detalle": detalle, "evidencia": tiene_foto,
+                    "nombre_cliente": nombre_cliente, "correo_cliente": correo_cliente
+                }).execute()
+                if respuesta_insert.data:
+                    numero_radicado = str(respuesta_insert.data[0]['id'])
+            except Exception as e:
+                print(f"Error DB Factura: {e}")
+                
+            try:
+                tipo_completo = "Solicitud Factura Electrónica"
+                destinatario_interno = EMAIL_COORD_SAC
+                nombre_area = "Coordinación de Servicio al Cliente"
+                correos_internos_str = f"{EMAIL_COORD_SAC}, {EMAIL_SISTEMAS}, {EMAIL_JEFE}"
+                
+                enviar_correo_pqrs_franquiciado(correo_f, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area, nombre_cliente, correo_cliente)
+                enviar_correo_pqrs_interno(correos_internos_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, nombre_area, nombre_cliente, correo_cliente)
+            except Exception as e:
+                print("Error enviando correo factura:", e)
+                
+            estado_actual = "menu_opciones"
+            datos_pqrs = {}
+            respuesta_bot = f"✅ *Solicitud de Facturación Recibida*\n*Ticket: #{numero_radicado}*\n\nTu solicitud y la foto de la tirilla han sido enviadas. Se procesará pronto."
+            botones_bot = ["Menú Principal", "Finalizar"]
 
     elif estado_actual == "esperando_nombre_pqrs":
         datos_pqrs["nombre_cliente"] = texto_usuario
@@ -705,15 +753,15 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "Entendido. Te informamos que cada punto de venta realiza sus contrataciones de forma independiente, por lo que debes acercarte al punto que quieras o más te sirva y entregar allí tu hoja de vida impresa.\n\n"
                 "¡Mucho éxito en tu búsqueda! 🌱"
             )
-            botones_bot = ["Volver", "Finalizar"]
-        elif texto in ["operativo", "operativo "]:
+            botones_bot = ["Menú Principal", "Finalizar"]
+        elif texto in ["planta cosechas", "planta cosechas "]:
             estado_actual = "esperando_ciudad_corporativo"
-            datos_pqrs["tipo_empleo"] = "Operativo"
-            respuesta_bot = "¡Excelente elección!\n\nPor favor, indícanos desde qué ciudad te postulas:"
-            botones_bot = ["Medellín", "Bogotá"] # They can type another city, but buttons suggest Medellín and Bogotá
+            datos_pqrs["tipo_empleo"] = "Planta Cosechas"
+            respuesta_bot = "Estas son nuestras sedes principales.\nPor favor, indícanos en qué ciudad te interesaría:"
+            botones_bot = ["Medellín", "Bogotá"]
         else:
             respuesta_bot = "⚠️ Opción no reconocida. Por favor, selecciona una:"
-            botones_bot = ["Punto de Venta", "Operativo"]
+            botones_bot = ["Punto de Venta", "Planta Cosechas"]
 
     elif estado_actual == "esperando_ciudad_corporativo":
         if texto in ["medellín", "medellin", "bogotá", "bogota"]:
