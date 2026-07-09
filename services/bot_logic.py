@@ -682,7 +682,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             
             if val == "No":
                 estado_actual = "esperando_contacto_sin_local_franquicia"
-                respuesta_bot = "Muchas gracias, tus datos han sido tomados de igual forma.\n\nTen en cuenta que en Cosechas no nos hacemos cargo de la búsqueda del local.\n\n¿Deseas que un agente se comunique contigo de todas formas?"
+                respuesta_bot = "Muchas gracias, tus datos han sido tomados de igual forma.\n\nTen en cuenta que en Cosechas no nos hacemos cargo de la búsqueda del local.\n\n¿Deseas que un agente se comunique contigo?"
                 botones_bot = ["Contactarme", "Menú Principal", "Finalizar"]
             else:
                 estado_actual = "esperando_direccion_local_franquicia"
@@ -695,7 +695,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
     elif estado_actual == "esperando_contacto_sin_local_franquicia":
         opciones_validas = ["contactarme", "menú principal", "menu principal", "finalizar"]
         if any(op in texto for op in opciones_validas):
-            if "contacten" in texto:
+            if "contactarme" in texto:
                 guardar_lead_franquicia(celular, datos_pqrs)
                 estado_actual = "menu_opciones"
                 datos_pqrs = {}
