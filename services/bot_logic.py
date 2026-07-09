@@ -683,7 +683,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             if val == "No":
                 estado_actual = "esperando_contacto_sin_local_franquicia"
                 respuesta_bot = "Muchas gracias, tus datos han sido tomados de igual forma.\n\nTen en cuenta que en Cosechas no nos hacemos cargo de la búsqueda del local.\n\n¿Deseas que un agente se comunique contigo de todas formas?"
-                botones_bot = ["Me contacten", "Menú Principal", "Finalizar"]
+                botones_bot = ["Contactarme", "Menú Principal", "Finalizar"]
             else:
                 estado_actual = "esperando_direccion_local_franquicia"
                 respuesta_bot = "Por favor escribe la *dirección completa* y el *barrio* del local:"
@@ -693,7 +693,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             botones_bot = ["Sí", "No"]
 
     elif estado_actual == "esperando_contacto_sin_local_franquicia":
-        opciones_validas = ["me contacten", "menú principal", "menu principal", "finalizar"]
+        opciones_validas = ["contactarme", "menú principal", "menu principal", "finalizar"]
         if any(op in texto for op in opciones_validas):
             if "contacten" in texto:
                 guardar_lead_franquicia(celular, datos_pqrs)
@@ -713,7 +713,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 botones_bot = ["Menú y Precios", "Radicar PQRS", "Franquicias Col"]
         else:
             respuesta_bot = "⚠️ Por favor selecciona una opción:"
-            botones_bot = ["Me contacten", "Menú Principal", "Finalizar"]
+            botones_bot = ["Contactarme", "Menú Principal", "Finalizar"]
             
     elif estado_actual == "esperando_direccion_local_franquicia":
         datos_pqrs["direccion_local"] = texto_usuario
