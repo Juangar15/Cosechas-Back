@@ -164,7 +164,7 @@ async def enviar_documento_whatsapp(celular_destino: str, url_documento: str, no
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)), before_sleep=log_retry, reraise=True)
-async def procesar_imagen_whatsapp(media_id: str) -> str:
+async def procesar_imagen_whatsapp(media_id: str, carpeta: str = "whatsapp-pqrs") -> str:
     try:
         url_info = f"https://graph.facebook.com/v17.0/{media_id}"
         headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
@@ -189,7 +189,7 @@ async def procesar_imagen_whatsapp(media_id: str) -> str:
         fecha_actual = datetime.now()
         mes_anio = fecha_actual.strftime("%Y-%m")
         nombre_unico = f"evidencia_wp_{uuid.uuid4()}.jpg"
-        ruta_s3 = f"{APP_ENV}/whatsapp-pqrs/{mes_anio}/{nombre_unico}"
+        ruta_s3 = f"{APP_ENV}/{carpeta}/{mes_anio}/{nombre_unico}"
         
         s3 = boto3.client(
             's3',

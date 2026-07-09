@@ -97,7 +97,15 @@ async def recibir_mensajes_whatsapp_real(background_tasks: BackgroundTasks, payl
                                 
                         elif mensaje_data.get("type") == "image":
                             media_id = mensaje_data["image"]["id"]
-                            url_publica = await procesar_imagen_whatsapp(media_id)
+                            # Detectar si el usuario está en el flujo de foto de franquicia
+                            try:
+                                from config import supabase as _sb
+                                res_estado = _sb.table("sesiones_bot").select("estado").eq("celular", celular_cliente).execute()
+                                estado_sesion = res_estado.data[0]["estado"] if res_estado.data else ""
+                            except:
+                                estado_sesion = ""
+                            carpeta = "whatsapp-franquicias" if estado_sesion == "esperando_foto_local_franquicia" else "whatsapp-pqrs"
+                            url_publica = await procesar_imagen_whatsapp(media_id, carpeta)
                             texto_cliente = f"[IMAGEN_URL]:{url_publica}"
 
                         elif mensaje_data.get("type") == "document":

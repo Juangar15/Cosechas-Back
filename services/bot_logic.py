@@ -683,7 +683,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             if val == "No":
                 estado_actual = "esperando_contacto_sin_local_franquicia"
                 respuesta_bot = "Muchas gracias, tus datos han sido tomados de igual forma.\n\nTen en cuenta que en Cosechas no nos hacemos cargo de la búsqueda del local.\n\n¿Deseas que un agente se comunique contigo de todas formas?"
-                botones_bot = ["Quiero que me contacten", "Menú Principal", "Finalizar"]
+                botones_bot = ["Me contacten", "Menú Principal", "Finalizar"]
             else:
                 estado_actual = "esperando_direccion_local_franquicia"
                 respuesta_bot = "Por favor escribe la *dirección completa* y el *barrio* del local:"
@@ -693,9 +693,9 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             botones_bot = ["Sí", "No"]
 
     elif estado_actual == "esperando_contacto_sin_local_franquicia":
-        opciones_validas = ["quiero que me contacten", "menú principal", "menu principal", "finalizar"]
-        if texto in opciones_validas:
-            if "quiero que me contacten" in texto:
+        opciones_validas = ["me contacten", "menú principal", "menu principal", "finalizar"]
+        if any(op in texto for op in opciones_validas):
+            if "contacten" in texto:
                 guardar_lead_franquicia(celular, datos_pqrs)
                 estado_actual = "menu_opciones"
                 datos_pqrs = {}
@@ -710,10 +710,10 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 estado_actual = "menu_principal"
                 datos_pqrs = {}
                 respuesta_bot = "¿En qué más te puedo ayudar?"
-                botones_bot = ["Consultar Menú y Precios", "Domicilios", "Hablar con un Agente", "PQRS", "Trabaja con Nosotros", "Franquicias Col"]
+                botones_bot = ["Menú y Precios", "Radicar PQRS", "Franquicias Col"]
         else:
             respuesta_bot = "⚠️ Por favor selecciona una opción:"
-            botones_bot = ["Quiero que me contacten", "Menú Principal", "Finalizar"]
+            botones_bot = ["Me contacten", "Menú Principal", "Finalizar"]
             
     elif estado_actual == "esperando_direccion_local_franquicia":
         datos_pqrs["direccion_local"] = texto_usuario
@@ -722,24 +722,24 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         botones_bot = ["No tengo la foto", "Volver"]
         
     elif estado_actual == "esperando_foto_local_franquicia":
-        if texto_usuario.startswith("[imagen_url]:"):
-            datos_pqrs["foto_local"] = texto_usuario.replace("[imagen_url]:", "").strip()
+        if "[imagen_url]:" in texto:
+            url_foto = texto.split("]:")[1].strip()
+            datos_pqrs["foto_local"] = url_foto
             estado_actual = "esperando_involucramiento_franquicia"
-            respuesta_bot = "¡Foto recibida!\n\n¿Qué nivel de involucramiento tendrías en el negocio?"
+            respuesta_bot = "¡Foto recibida! 📸\n\n¿Qué nivel de involucramiento tendrías en el negocio?"
             botones_bot = ["Directo", "Supervisión", "Inversión pasiva"]
-        elif "no tengo la foto" in texto:
+        elif "no tengo la foto" in texto or "no tengo foto" in texto:
             datos_pqrs["foto_local"] = "No adjuntó foto"
             estado_actual = "esperando_involucramiento_franquicia"
             respuesta_bot = "¿Qué nivel de involucramiento tendrías en el negocio?"
             botones_bot = ["Directo", "Supervisión", "Inversión pasiva"]
         elif "volver" in texto:
-            estado_actual = "menu_principal"
-            datos_pqrs = {}
-            respuesta_bot = "¿En qué más te puedo ayudar?"
-            botones_bot = ["Consultar Menú y Precios", "Domicilios", "Hablar con un Agente", "PQRS", "Trabaja con Nosotros", "Franquicias Col"]
+            estado_actual = "esperando_direccion_local_franquicia"
+            respuesta_bot = "Por favor escribe la *dirección completa* y el *barrio* del local:"
+            botones_bot = ["Volver"]
         else:
-            respuesta_bot = "⚠️ Por favor envía una imagen de la fachada o presiona el botón 'No tengo la foto':"
-            botones_bot = ["No tengo la foto", "Volver"]
+            respuesta_bot = "⚠️ No detecté una imagen válida.\n\nPor favor envía la *foto de la fachada* desde el clip 📎 de tu WhatsApp, o toca 'Sin foto'."
+            botones_bot = ["Sin foto", "Volver"]
 
     elif estado_actual == "esperando_involucramiento_franquicia":
         opciones_validas = ["directo", "supervisión", "supervision", "inversión pasiva", "inversion pasiva"]
