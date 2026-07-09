@@ -178,17 +178,25 @@ def enviar_correo_pqrs_interno(destinatarios: str, radicado: str, tipo: str, det
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
-def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado: str, involucramiento: str, inversion_capital: str, nombre: str, correo: str, tipo_lead: str, estado_agendamiento: str):
+def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado: str, involucramiento: str, nombre: str, correo: str, tipo_franquicia: str, direccion_local: str, foto_local: str):
     mensaje = MIMEMultipart("alternative")
     mensaje['From'] = f"Expansión Cosechas <{EMAIL_USER}>"
     
     # Usamos la variable de entorno
     mensaje['To'] = EMAIL_EXPANSION 
-    mensaje['Subject'] = f"🚀 Nuevo Lead de Franquicia ({tipo_lead}) - {ciudad}"
+    mensaje['Subject'] = f"🚀 Nuevo Lead de Franquicia ({tipo_franquicia}) - {ciudad}"
 
-    # Estilo de color según el Lead
-    color_lead = "#ed1650" if tipo_lead == "A" else ("#f59e0b" if tipo_lead == "B" else "#64748b")
-    badge_lead = f"<span style='background-color: {color_lead}; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 18px;'>LEAD {tipo_lead}</span>"
+    # Estilo de color
+    badge_lead = f"<span style='background-color: #9eca3a; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 18px;'>NUEVO LEAD</span>"
+
+    # Botón de foto si aplica
+    foto_html = ""
+    if foto_local and foto_local != "No adjuntó foto" and "http" in foto_local:
+        foto_html = f"<div style='text-align: center; margin-top: 20px;'><a href='{foto_local}' style='background-color: #ed1650; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;'>Ver Foto de Fachada</a></div>"
+    elif foto_local:
+        foto_html = f"<p><span class='highlight'>📸 Foto Fachada:</span> {foto_local}</p>"
+
+    direccion_html = f"<p><span class='highlight'>📍 Dirección Local:</span> {direccion_local}</p>" if direccion_local else ""
 
     cuerpo_html = f"""
     <!DOCTYPE html>
@@ -213,7 +221,7 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
                 <h2>🚀 Nuevo Prospecto de Franquicia</h2>
             </div>
             <div class="content">
-                <p>Hola, equipo de Expansión. Un nuevo prospecto ha sido calificado a través del asistente virtual de WhatsApp.</p>
+                <p>Hola, equipo de Expansión. Un nuevo prospecto ha sido contactado a través del asistente virtual de WhatsApp.</p>
                 
                 <div class="lead-score">
                     {badge_lead}
@@ -226,13 +234,12 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
                     <p><span class="highlight">✉️ Correo:</span> {correo}</p>
                     <p><span class="highlight">🌆 Ciudad:</span> {ciudad}</p>
                     
-                    <h3 style="margin-top: 20px; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Perfil de Inversión</h3>
-                    <p><span class="highlight">💰 Capital ($130M):</span> {inversion_capital}</p>
+                    <h3 style="margin-top: 20px; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Perfil e Interés</h3>
+                    <p><span class="highlight">🎯 Interés:</span> {tipo_franquicia}</p>
+                    <p><span class="highlight">🏢 Tiene Local:</span> {local_identificado}</p>
+                    {direccion_html}
                     <p><span class="highlight">🤝 Involucramiento:</span> {involucramiento}</p>
-                    <p><span class="highlight">📍 Local visto:</span> {local_identificado}</p>
-                    
-                    <h3 style="margin-top: 20px; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Resolución del Bot</h3>
-                    <p><span class="highlight">📅 Agendamiento:</span> <strong>{estado_agendamiento}</strong></p>
+                    {foto_html}
                 </div>
             </div>
             <div class="footer">Generado automáticamente por el Bot de Cosechas</div>

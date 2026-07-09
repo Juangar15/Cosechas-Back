@@ -13,20 +13,20 @@ def guardar_lead_franquicia(celular, datos):
             "correo": datos.get("correo_franquicia", "No especificado"),
             "local_identificado": datos.get("local_identificado", "No"),
             "involucramiento": datos.get("involucramiento", "No"),
-            "inversion_capital": datos.get("inversion_capital", "No"),
-            "tipo_lead": datos.get("tipo_lead", "C"),
-            "estado_agendamiento": datos.get("estado_agendamiento", "No aplica")
+            "tipo_franquicia": datos.get("tipo_franquicia", ""),
+            "direccion_local": datos.get("direccion_local", ""),
+            "foto_local": datos.get("foto_local", "")
         }).execute()
         enviar_correo_nueva_franquicia(
             celular, 
             datos.get("ciudad_franquicia", ""), 
             datos.get("local_identificado", ""), 
             datos.get("involucramiento", ""), 
-            datos.get("inversion_capital", ""), 
             datos.get("nombre_franquicia", ""), 
             datos.get("correo_franquicia", ""),
-            datos.get("tipo_lead", ""),
-            datos.get("estado_agendamiento", "")
+            datos.get("tipo_franquicia", ""),
+            datos.get("direccion_local", ""),
+            datos.get("foto_local", "")
         )
     except Exception as e:
         print("Error al guardar lead de franquicia:", e)
@@ -630,21 +630,116 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
 
     elif estado_actual == "esperando_correo_franquicia":
         datos_pqrs["correo_franquicia"] = texto_usuario
-        estado_actual = "esperando_local_franquicia"
-        respuesta_bot = "¿Ya tienes un local o zona identificada para abrir?"
-        botones_bot = ["Sí", "Estoy en búsqueda", "No"]
+        estado_actual = "esperando_tipo_interes_franquicia"
+        respuesta_bot = "¿Estás interesado en abrir una Nueva Franquicia o prefieres una que ya esté En Operación?"
+        botones_bot = ["Nueva Franquicia", "En operación"]
+
+    elif estado_actual == "esperando_tipo_interes_franquicia":
+        opciones_validas = ["nueva franquicia", "en operación", "en operacion"]
+        if texto in opciones_validas:
+            val = "Nueva Franquicia" if "nueva" in texto else "En operación"
+            datos_pqrs["tipo_franquicia"] = val
+            
+            if val == "En operación":
+                guardar_lead_franquicia(celular, datos_pqrs)
+                estado_actual = "menu_opciones"
+                datos_pqrs = {}
+                respuesta_bot = "Uno de nuestros agentes se contactará contigo para brindarte más información sobre las franquicias en operación.\n\n¿Deseas consultar algo más?"
+                botones_bot = ["Menú Principal", "Finalizar"]
+            else:
+                estado_actual = "esperando_interes_pdf_franquicia"
+                respuesta_bot = "Te invito a revisar nuestra presentación oficial de franquicias.\n\nTras conocer nuestro modelo, ¿sigues interesado?"
+                documento_bot = {
+                    "url": f"{R2_PUBLIC_URL}/presentacion/PRESENTACION FRANQUICIAS 2026_v2.pdf",
+                    "nombre": "PRESENTACION FRANQUICIAS 2026_v2.pdf"
+                }
+                botones_bot = ["Sí, estoy interesado", "No, gracias"]
+        else:
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Nueva Franquicia", "En operación"]
+
+    elif estado_actual == "esperando_interes_pdf_franquicia":
+        opciones_validas = ["sí, estoy interesado", "si, estoy interesado", "no, gracias"]
+        if texto in opciones_validas:
+            if "no" in texto:
+                estado_actual = "menu_opciones"
+                datos_pqrs = {}
+                respuesta_bot = "Muchas gracias por tu tiempo.\n\n¿Deseas consultar algo más?"
+                botones_bot = ["Menú Principal", "Finalizar"]
+            else:
+                estado_actual = "esperando_local_franquicia"
+                respuesta_bot = "¿Ya tienes un local o zona identificada para abrir?"
+                botones_bot = ["Sí", "No"]
+        else:
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Sí, estoy interesado", "No, gracias"]
 
     elif estado_actual == "esperando_local_franquicia":
-        opciones_validas = ["sí", "si", "estoy en búsqueda", "estoy en busqueda", "no"]
+        opciones_validas = ["sí", "si", "no"]
         if texto in opciones_validas:
-            val = "Estoy en búsqueda" if "busqueda" in texto or "búsqueda" in texto else ("Sí" if "si" in texto or "sí" in texto else "No")
+            val = "Sí" if "si" in texto or "sí" in texto else "No"
             datos_pqrs["local_identificado"] = val
+            
+            if val == "No":
+                estado_actual = "esperando_contacto_sin_local_franquicia"
+                respuesta_bot = "Muchas gracias, tus datos han sido tomados de igual forma.\n\nTen en cuenta que en Cosechas no nos hacemos cargo de la búsqueda del local.\n\n¿Deseas que un agente se comunique contigo de todas formas?"
+                botones_bot = ["Quiero que me contacten", "Menú Principal", "Finalizar"]
+            else:
+                estado_actual = "esperando_direccion_local_franquicia"
+                respuesta_bot = "Por favor escribe la *dirección completa* y el *barrio* del local:"
+                botones_bot = ["Volver"]
+        else:
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Sí", "No"]
+
+    elif estado_actual == "esperando_contacto_sin_local_franquicia":
+        opciones_validas = ["quiero que me contacten", "menú principal", "menu principal", "finalizar"]
+        if texto in opciones_validas:
+            if "quiero que me contacten" in texto:
+                guardar_lead_franquicia(celular, datos_pqrs)
+                estado_actual = "menu_opciones"
+                datos_pqrs = {}
+                respuesta_bot = "Tus datos han sido enviados a nuestros asesores. Muy pronto se comunicarán contigo.\n\n¿Deseas consultar algo más?"
+                botones_bot = ["Menú Principal", "Finalizar"]
+            elif "finalizar" in texto:
+                estado_actual = "menu_principal"
+                datos_pqrs = {}
+                respuesta_bot = "¡Gracias por comunicarte con Cosechas! Que tengas un excelente día. 👋"
+            else:
+                # "Menu principal"
+                estado_actual = "menu_principal"
+                datos_pqrs = {}
+                respuesta_bot = "¿En qué más te puedo ayudar?"
+                botones_bot = ["Consultar Menú y Precios", "Domicilios", "Hablar con un Agente", "PQRS", "Trabaja con Nosotros", "Franquicias Col"]
+        else:
+            respuesta_bot = "⚠️ Por favor selecciona una opción:"
+            botones_bot = ["Quiero que me contacten", "Menú Principal", "Finalizar"]
+            
+    elif estado_actual == "esperando_direccion_local_franquicia":
+        datos_pqrs["direccion_local"] = texto_usuario
+        estado_actual = "esperando_foto_local_franquicia"
+        respuesta_bot = "Por favor, envíame una *foto general donde se vea la fachada* del local:"
+        botones_bot = ["No tengo la foto", "Volver"]
+        
+    elif estado_actual == "esperando_foto_local_franquicia":
+        if texto_usuario.startswith("[imagen_url]:"):
+            datos_pqrs["foto_local"] = texto_usuario.replace("[imagen_url]:", "").strip()
+            estado_actual = "esperando_involucramiento_franquicia"
+            respuesta_bot = "¡Foto recibida!\n\n¿Qué nivel de involucramiento tendrías en el negocio?"
+            botones_bot = ["Directo", "Supervisión", "Inversión pasiva"]
+        elif "no tengo la foto" in texto:
+            datos_pqrs["foto_local"] = "No adjuntó foto"
             estado_actual = "esperando_involucramiento_franquicia"
             respuesta_bot = "¿Qué nivel de involucramiento tendrías en el negocio?"
             botones_bot = ["Directo", "Supervisión", "Inversión pasiva"]
+        elif "volver" in texto:
+            estado_actual = "menu_principal"
+            datos_pqrs = {}
+            respuesta_bot = "¿En qué más te puedo ayudar?"
+            botones_bot = ["Consultar Menú y Precios", "Domicilios", "Hablar con un Agente", "PQRS", "Trabaja con Nosotros", "Franquicias Col"]
         else:
-            respuesta_bot = "⚠️ Por favor selecciona una opción:"
-            botones_bot = ["Sí", "Estoy en búsqueda", "No"]
+            respuesta_bot = "⚠️ Por favor envía una imagen de la fachada o presiona el botón 'No tengo la foto':"
+            botones_bot = ["No tengo la foto", "Volver"]
 
     elif estado_actual == "esperando_involucramiento_franquicia":
         opciones_validas = ["directo", "supervisión", "supervision", "inversión pasiva", "inversion pasiva"]
@@ -652,97 +747,17 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             if "directo" in texto: val = "Directo"
             elif "supervis" in texto: val = "Supervisión"
             else: val = "Inversión pasiva"
+            
             datos_pqrs["involucramiento"] = val
-            estado_actual = "esperando_inversion_franquicia"
-            respuesta_bot = "¿Cuentas con una inversión aproximada de $130 millones para abrir tu punto?"
-            botones_bot = ["Sí", "Parcialmente", "No"]
+            
+            guardar_lead_franquicia(celular, datos_pqrs)
+            estado_actual = "menu_opciones"
+            datos_pqrs = {}
+            respuesta_bot = "Tus datos han sido tomados. Uno de nuestros agentes se comunicará contigo próximamente.\n\n¿Deseas consultar algo más?"
+            botones_bot = ["Menú Principal", "Finalizar"]
         else:
             respuesta_bot = "⚠️ Por favor selecciona una opción:"
             botones_bot = ["Directo", "Supervisión", "Inversión pasiva"]
-
-    elif estado_actual == "esperando_inversion_franquicia":
-        opciones_validas = ["sí", "si", "parcialmente", "no"]
-        if texto in opciones_validas:
-            val = "Parcialmente" if "parcialmente" in texto else ("Sí" if "si" in texto or "sí" in texto else "No")
-            datos_pqrs["inversion_capital"] = val
-            
-            local = datos_pqrs.get("local_identificado")
-            involucramiento = datos_pqrs.get("involucramiento")
-            capital = datos_pqrs.get("inversion_capital")
-            
-            tipo_lead = "C"
-            if capital == "No" or involucramiento == "Inversión pasiva":
-                tipo_lead = "C"
-            elif capital == "Sí" and involucramiento in ["Directo", "Supervisión"] and local in ["Sí", "Estoy en búsqueda"]:
-                tipo_lead = "A"
-            elif capital == "Parcialmente" and involucramiento in ["Directo", "Supervisión"]:
-                tipo_lead = "B"
-            elif capital == "Sí" and involucramiento in ["Directo", "Supervisión"] and local == "No":
-                tipo_lead = "B"
-                
-            datos_pqrs["tipo_lead"] = tipo_lead
-            
-            if tipo_lead in ["A", "B"]:
-                estado_actual = "esperando_agendamiento_franquicia"
-                respuesta_bot = (
-                    "¡Excelente! 🙌\nTu perfil se ajusta muy bien a nuestra franquicia.\n\n"
-                    "¿Te gustaría agendar un espacio virtual con nuestra especialista de franquicias para resolver todas tus dudas y conocer el paso a paso?"
-                )
-                botones_bot = ["Sí, agendar", "Más información"]
-            else:
-                datos_pqrs["estado_agendamiento"] = "No aplica"
-                guardar_lead_franquicia(celular, datos_pqrs)
-                estado_actual = "menu_opciones"
-                datos_pqrs = {}
-                respuesta_bot = (
-                    "¡Gracias por tu interés! 🙌\n\n"
-                    "En este momento buscamos perfiles que cuenten con el capital requerido y un nivel de involucramiento activo en la operación, ya que esto es clave para el éxito de la franquicia.\n\n"
-                    "Si más adelante cumples con estas condiciones, estaremos felices de acompañarte en tu proceso 🚀"
-                )
-                botones_bot = ["Volver", "Finalizar"]
-        else:
-            respuesta_bot = "⚠️ Por favor selecciona una opción:"
-            botones_bot = ["Sí", "Parcialmente", "No"]
-
-    elif estado_actual == "esperando_agendamiento_franquicia":
-        if texto in ["sí, agendar", "si, agendar", "si agendar", "si"]:
-            datos_pqrs["estado_agendamiento"] = "Sí, agendar"
-            guardar_lead_franquicia(celular, datos_pqrs)
-            estado_actual = "menu_opciones"
-            datos_pqrs = {}
-            respuesta_bot = "¡Perfecto! 🙌 Nos comunicaremos contigo para coordinar tu disponibilidad y programar la reunión virtual."
-            botones_bot = ["Volver", "Finalizar"]
-        elif texto in ["más información", "mas informacion", "quiero más información primero", "mas informacion primero"]:
-            estado_actual = "esperando_confirmacion_agendamiento"
-            respuesta_bot = (
-                "¡Claro! 😊 Te cuento brevemente:\n\n"
-                "Cosechas es una franquicia con una inversión aproximada de $130 millones, con acompañamiento en todo el proceso: desde la elección del punto, montaje, capacitación y operación.\n"
-                "Es un modelo probado, con ubicaciones estratégicas y una operación sencilla, lo que facilita la gestión del negocio.\n\n"
-                "¿Te gustaría agendar un espacio con nuestra especialista de franquicias?"
-            )
-            botones_bot = ["Sí, agendar", "Aún no"]
-        else:
-            respuesta_bot = "⚠️ Por favor selecciona una opción:"
-            botones_bot = ["Sí, agendar", "Más información"]
-
-    elif estado_actual == "esperando_confirmacion_agendamiento":
-        if texto in ["sí, agendar", "si, agendar", "si agendar", "si"]:
-            datos_pqrs["estado_agendamiento"] = "Sí, agendar"
-            guardar_lead_franquicia(celular, datos_pqrs)
-            estado_actual = "menu_opciones"
-            datos_pqrs = {}
-            respuesta_bot = "¡Perfecto! 🙌 Nos comunicaremos contigo para coordinar tu disponibilidad y programar la reunión virtual."
-            botones_bot = ["Volver", "Finalizar"]
-        elif texto in ["aún no", "aun no", "no"]:
-            datos_pqrs["estado_agendamiento"] = "Aún no"
-            guardar_lead_franquicia(celular, datos_pqrs)
-            estado_actual = "menu_opciones"
-            datos_pqrs = {}
-            respuesta_bot = "Igualmente, te recomiendo una llamada corta, ya que podemos revisar tu caso específico y resolver todas tus dudas mucho más rápido 🙌"
-            botones_bot = ["Volver", "Finalizar"]
-        else:
-            respuesta_bot = "⚠️ Por favor selecciona una opción:"
-            botones_bot = ["Sí, agendar", "Aún no"]
 
     elif estado_actual == "esperando_area_trabajo":
         if texto in ["punto de venta", "punto de venta "]:
