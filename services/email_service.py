@@ -3,8 +3,8 @@ import email.utils
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import urllib.parse
-# Importamos la nueva variable EMAIL_EXPANSION
-from config import EMAIL_USER, EMAIL_PASS, EMAIL_EXPANSION 
+# Importamos las variables de correo principal
+from config import EMAIL_USER, EMAIL_PASS 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 def log_retry_email(retry_state):
@@ -257,7 +257,7 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
         servidor.sendmail(EMAIL_USER, ["dirmontajes@cosechasexpress.com"], mensaje.as_string())
         
         servidor.quit()
-        print(f"✅ Correo de franquicia enviado exitosamente a: {EMAIL_EXPANSION}")
+        print(f"✅ Correo de franquicia enviado exitosamente a: dirmontajes@cosechasexpress.com")
     except smtplib.SMTPException as e:
         print(f"❌ Error SMTP al enviar correo de franquicia, se reintentará: {e}")
         raise

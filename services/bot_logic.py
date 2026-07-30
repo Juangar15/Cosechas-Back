@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from config import supabase, EMAIL_USER, EMAIL_JEFE, EMAIL_COORD_SAC, EMAIL_CAPACITADORA, EMAIL_SISTEMAS, EMAIL_GERENCIA_JURIDICA, R2_PUBLIC_URL
+from config import supabase, EMAIL_USER, R2_PUBLIC_URL
 from services.email_service import enviar_correo_pqrs_franquiciado, enviar_correo_pqrs_interno, enviar_correo_nueva_franquicia, enviar_correo_hoja_vida
 from services.location_service import analizar_ubicacion_sedes
 from services.location_service import analizar_ubicacion_sedes
