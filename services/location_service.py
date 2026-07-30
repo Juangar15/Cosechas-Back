@@ -21,9 +21,7 @@ def calcular_distancia(lat1, lon1, lat2, lon2):
 
 def tiene_domicilio(sede):
     celular = sede.get('pdv_celular')
-    telefono = sede.get('pdv_telefono')
-    tiene_propio = bool((celular and str(celular).strip().lower() != 'no') or 
-                        (telefono and str(telefono).strip().lower() != 'no'))
+    tiene_propio = bool(celular and str(celular).strip().lower() != 'no')
     
     rappi = str(sede.get('pdv_aplicacion_rappi', '')).strip().lower()
     tiene_plat = rappi in ['rappi', 'didi', 'ambos']

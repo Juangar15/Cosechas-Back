@@ -214,12 +214,24 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                         pass
                         
                     def format_opciones(s):
-                        cel = s.get('pdv_celular') or s.get('pdv_telefono')
+                        cel = s.get('pdv_celular')
                         rapp = str(s.get('pdv_aplicacion_rappi', '')).strip().title()
                         out = []
-                        if cel and str(cel).lower() != 'no': out.append(f"  • Domicilio Propio: {cel}")
-                        if rapp in ['Rappi', 'Didi', 'Ambos']: out.append(f"  • Plataformas: {rapp}")
-                        return "\n".join(out)
+                        
+                        tiene_propio = cel and str(cel).lower() != 'no'
+                        tiene_app = rapp in ['Rappi', 'Didi', 'Ambos']
+                        
+                        if tiene_propio:
+                            out.append(f"  • Domicilio Propio: {cel}")
+                            
+                        if tiene_app:
+                            texto_plat = "las plataformas" if rapp == 'Ambos' else f"la plataforma {rapp}"
+                            if not tiene_propio:
+                                out.append(f"  • Puedes encontrarnos a través de {texto_plat}.")
+                            else:
+                                out.append(f"  • Plataformas: {rapp}")
+                                
+                        return "\\n".join(out)
                         
                     maps_url_abs = f"https://www.google.com/maps/search/?api=1&query={sede_absoluta['latitud']},{sede_absoluta['longitud']}"
                     
