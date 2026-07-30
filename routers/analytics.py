@@ -191,16 +191,23 @@ async def get_sedes_nueva_imagen():
     Solo toma en cuenta sedes que estén 'OPERANDO'.
     """
     try:
-        # Solo traemos las sedes en estado OPERANDO
-        respuesta = supabase.table("sedes_oficiales").select("pdv_nueva_imagen").eq("pdv_estado", "OPERANDO").execute()
+        # Solo traemos las sedes en estado OPERANDO y traemos el color de la imagen
+        respuesta = supabase.table("sedes_oficiales").select("pdv_nueva_imagen, pdv_color_imagen").eq("pdv_estado", "OPERANDO").execute()
         sedes = respuesta.data
         
-        imagen_count = {"Sí": 0, "No": 0, "Próximo": 0, "Otro": 0}
+        imagen_count = {"Sí (Roja)": 0, "Sí (Café)": 0, "Sí (Otro)": 0, "No": 0, "Próximo": 0, "Otro": 0}
         
         for s in sedes:
             estado_img = s.get("pdv_nueva_imagen")
+            color_img = s.get("pdv_color_imagen")
+            
             if estado_img == "Sí":
-                imagen_count["Sí"] += 1
+                if color_img == "Roja":
+                    imagen_count["Sí (Roja)"] += 1
+                elif color_img == "Cafe" or color_img == "Café":
+                    imagen_count["Sí (Café)"] += 1
+                else:
+                    imagen_count["Sí (Otro)"] += 1
             elif estado_img == "No":
                 imagen_count["No"] += 1
             elif estado_img == "Próximo":
@@ -210,10 +217,11 @@ async def get_sedes_nueva_imagen():
                 
         # Retornar en un formato listo para el PieChart
         resultado = []
-        if imagen_count["Sí"] > 0: resultado.append({"name": "Sí", "value": imagen_count["Sí"]})
+        if imagen_count["Sí (Roja)"] > 0: resultado.append({"name": "Sí (Roja)", "value": imagen_count["Sí (Roja)"]})
+        if imagen_count["Sí (Café)"] > 0: resultado.append({"name": "Sí (Café)", "value": imagen_count["Sí (Café)"]})
+        if imagen_count["Sí (Otro)"] > 0: resultado.append({"name": "Sí (Otro)", "value": imagen_count["Sí (Otro)"]})
         if imagen_count["No"] > 0: resultado.append({"name": "No", "value": imagen_count["No"]})
         if imagen_count["Próximo"] > 0: resultado.append({"name": "Próximo", "value": imagen_count["Próximo"]})
-        # Opcional: ignorar "Otro" o incluirlo si es necesario. Lo ignoraremos para enfocarnos en Si/No/Próximo.
         
         return resultado
     except Exception as e:
