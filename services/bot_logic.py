@@ -348,8 +348,16 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             botones_bot = ["Inconformidad", "Sugerencia", "Felicitación"]
         else:
             try:
-                res = supabase.table("sedes_oficiales").select("*").or_(f"pdv_ciudad.ilike.%{texto}%,pdv_barrio.ilike.%{texto}%,ceco_nombre.ilike.%{texto}%").execute()
-                tiendas = res.data
+                res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
+                todas = res.data
+                palabras = [p.strip() for p in texto.lower().replace(',', ' ').split() if len(p.strip()) > 2]
+                if not palabras: palabras = [texto.lower().strip()]
+                
+                tiendas = []
+                for s in todas:
+                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
+                    if all(word in target for word in palabras):
+                        tiendas.append(s)
             except Exception as e:
                 print("Error Búsqueda Supabase PQRS:", e)
                 tiendas = []
@@ -403,8 +411,16 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 botones_bot = ["Sedes Generales", "Volver"]
         else:
             try:
-                res = supabase.table("sedes_oficiales").select("*").or_(f"pdv_ciudad.ilike.%{texto}%,pdv_barrio.ilike.%{texto}%,ceco_nombre.ilike.%{texto}%").execute()
-                tiendas = res.data
+                res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
+                todas = res.data
+                palabras = [p.strip() for p in texto.lower().replace(',', ' ').split() if len(p.strip()) > 2]
+                if not palabras: palabras = [texto.lower().strip()]
+                
+                tiendas = []
+                for s in todas:
+                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
+                    if all(word in target for word in palabras):
+                        tiendas.append(s)
             except Exception as e:
                 tiendas = []
                 
