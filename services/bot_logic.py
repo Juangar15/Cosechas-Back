@@ -348,27 +348,25 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             botones_bot = ["Inconformidad", "Sugerencia", "Felicitación"]
         else:
             try:
-                res = supabase.rpc("buscar_sede_cercana", {"busqueda": texto}).execute()
+                res = supabase.table("sedes_oficiales").select("*").or_(f"pdv_ciudad.ilike.%{texto}%,pdv_barrio.ilike.%{texto}%,ceco_nombre.ilike.%{texto}%").execute()
                 tiendas = res.data
             except Exception as e:
-                print("Error RPC Supabase:", e)
+                print("Error Búsqueda Supabase PQRS:", e)
                 tiendas = []
 
             if tiendas:
                 estado_actual = "seleccionando_sede_pqrs"
                 opciones_lista = []
-                for t in tiendas:
-                    # Garantizar compatibilidad sin importar cómo se llamen las columnas de retorno
-                    nombre_db = t.get("nombre_sede") or t.get("ceco_nombre") or "Sede Cosechas"
-                    ciudad_db = t.get("ciudad") or t.get("pdv_ciudad") or ""
-                    dir_db = t.get("direccion") or t.get("pdv_direccion") or ""
-                    nit_db = t.get("nit") or t.get("tercero_nit") or "SIN_NIT"
+                for t in tiendas[:10]: 
+                    nombre_db = t.get("ceco_nombre") or "Sede Cosechas"
+                    ciudad_db = t.get("pdv_ciudad") or ""
+                    dir_db = t.get("pdv_direccion") or ""
                     
                     nombre = str(nombre_db)[:24]
                     desc = f"{ciudad_db} - {dir_db}"[:72]
                     
                     opciones_lista.append({
-                        "id": f"nit_{nit_db}",
+                        "id": f"tnd_{nombre_db}"[:200],
                         "title": nombre,
                         "description": desc
                     })
@@ -384,36 +382,54 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 botones_bot = ["Sedes Generales", "Volver"]
 
     elif estado_actual == "seleccionando_sede_pqrs":
-        nit_seleccionado = None
-        if texto.startswith("nit_"):
-            nit_seleccionado = texto.replace("nit_", "")
-        else:
-            res_db = supabase.table("sedes_oficiales").select("tercero_nit").ilike("ceco_nombre", f"%{texto}%").execute()
+        nombre_sede_seleccionada = None
+        
+        if texto.startswith("tnd_"):
+            nombre_sede_seleccionada = texto.replace("tnd_", "")
+            
+            res_db = supabase.table("sedes_oficiales").select("*").eq("ceco_nombre", nombre_sede_seleccionada).execute()
             if res_db.data:
-                nit_seleccionado = res_db.data[0]["tercero_nit"]
-
-        if nit_seleccionado and nit_seleccionado != "sin_nit":
-            res_fr = supabase.table("sedes_oficiales").select("*").eq("tercero_nit", nit_seleccionado).execute()
-            if res_fr.data:
-                franquicia = res_fr.data[0]
-                datos_pqrs["nit"] = franquicia["tercero_nit"]
-                datos_pqrs["local"] = franquicia["ceco_nombre"]
+                franquicia = res_db.data[0]
+                datos_pqrs["nit"] = franquicia.get("tercero_nit", "SIN_NIT")
+                datos_pqrs["local"] = franquicia.get("ceco_nombre", "Sede Desconocida")
                 datos_pqrs["correo_franquiciado"] = franquicia.get("admin_correo") or EMAIL_USER
                 
                 estado_actual = "esperando_tipo_reporte"
-                respuesta_bot = f"✅ Sede confirmada: {franquicia['ceco_nombre']}.\n\n¿Qué tipo de reporte deseas realizar?"
+                respuesta_bot = f"✅ Sede confirmada: {franquicia.get('ceco_nombre', '')}.\n\n¿Qué tipo de reporte deseas realizar?"
                 botones_bot = ["Inconformidad", "Sugerencia", "Felicitación"]
             else:
                 estado_actual = "esperando_barrio_pqrs"
                 respuesta_bot = "Error al confirmar la sede. Intenta escribir el barrio de nuevo:"
                 botones_bot = ["Sedes Generales", "Volver"]
         else:
-            datos_pqrs["nit"] = None
-            datos_pqrs["local"] = texto_usuario.title() 
-            datos_pqrs["correo_franquiciado"] = EMAIL_USER
-            estado_actual = "esperando_tipo_reporte"
-            respuesta_bot = f"✅ Sede registrada.\n\n¿Qué tipo de reporte deseas realizar?"
-            botones_bot = ["Inconformidad", "Sugerencia", "Felicitación"]
+            try:
+                res = supabase.table("sedes_oficiales").select("*").or_(f"pdv_ciudad.ilike.%{texto}%,pdv_barrio.ilike.%{texto}%,ceco_nombre.ilike.%{texto}%").execute()
+                tiendas = res.data
+            except Exception as e:
+                tiendas = []
+                
+            if tiendas:
+                opciones_lista = []
+                for t in tiendas[:10]:
+                    nombre_db = t.get("ceco_nombre") or "Sede Cosechas"
+                    ciudad_db = t.get("pdv_ciudad") or ""
+                    dir_db = t.get("pdv_direccion") or ""
+                    
+                    opciones_lista.append({
+                        "id": f"tnd_{nombre_db}"[:200],
+                        "title": str(nombre_db)[:24],
+                        "description": f"{ciudad_db} - {dir_db}"[:72]
+                    })
+                
+                respuesta_bot = f"Por favor, asegúrate de desplegar el menú y seleccionar la tienda correcta de esta lista:"
+                botones_bot = {
+                    "tipo": "lista", 
+                    "boton": "Ver Tiendas",
+                    "opciones": opciones_lista
+                }
+            else:
+                respuesta_bot = "No encontré tiendas con esa ubicación. ¿Puedes intentar con otro barrio o ciudad? (O toca 'Sedes Generales')."
+                botones_bot = ["Sedes Generales", "Volver"]
 
     elif estado_actual == "esperando_tipo_reporte":
         if texto in ["inconformidad", "sugerencia", "felicitación", "felicitacion"]:
