@@ -581,9 +581,9 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 
             try:
                 tipo_completo = "Solicitud Factura Electrónica"
-                destinatario_interno = EMAIL_COORD_SAC
+                destinatario_interno = "servicioalcliente@cosechasexpress.com"
                 nombre_area = "Coordinación de Servicio al Cliente"
-                correos_internos_str = f"{EMAIL_COORD_SAC}, {EMAIL_SISTEMAS}, {EMAIL_JEFE}"
+                correos_internos_str = destinatario_interno
                 
                 enviar_correo_pqrs_franquiciado(correo_f, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area, nombre_cliente, correo_cliente)
                 enviar_correo_pqrs_interno(correos_internos_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, nombre_area, nombre_cliente, correo_cliente)
@@ -633,29 +633,12 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         nombre_cliente = datos_pqrs.get("nombre_cliente", "No especificado")
         correo_cliente = datos_pqrs.get("correo_cliente", "No especificado")
         
-        destinatario_interno = EMAIL_COORD_SAC
+        destinatario_interno = "servicioalcliente@cosechasexpress.com"
         nombre_area = "Coordinación de Servicio al Cliente"
-        correos_extra = []
-
-        if tipo_reporte in ["Inconformidad", "Sugerencia"]:
-            if motivo in ["Servicio", "Servicio-Producto"]:
-                destinatario_interno = EMAIL_COORD_SAC
-                nombre_area = "Coordinación de Servicio al Cliente"
-                if tipo in ["Factura electrónica", "Factura electronica", "Pago/Novedad"]:
-                    correos_extra.append(EMAIL_SISTEMAS)
-            elif motivo == "Producto":
-                if tipo in ["Preparación", "Presentación del producto"]:
-                    destinatario_interno = EMAIL_CAPACITADORA
-                    nombre_area = "Capacitación"
-                elif tipo == "Objeto en el producto":
-                    destinatario_interno = EMAIL_GERENCIA_JURIDICA
-                    nombre_area = "Gerencia Jurídica y Servicio al Cliente"
-                    correos_extra.append(EMAIL_COORD_SAC)
 
         # Armar las listas separadas
         correo_franquiciado_str = correo_f
-        correos_internos = [c for c in [destinatario_interno, EMAIL_JEFE] + correos_extra if c]
-        correos_internos_str = ", ".join(correos_internos)
+        correos_internos_str = destinatario_interno
         
         numero_radicado = "PENDIENTE"
 

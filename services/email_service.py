@@ -182,8 +182,7 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
     mensaje = MIMEMultipart("alternative")
     mensaje['From'] = f"Expansión Cosechas <{EMAIL_USER}>"
     
-    # Usamos la variable de entorno
-    mensaje['To'] = EMAIL_EXPANSION 
+    mensaje['To'] = "dirmontajes@cosechasexpress.com" 
     mensaje['Subject'] = f"🚀 Nuevo Lead de Franquicia ({tipo_franquicia}) - {ciudad}"
 
     # Estilo de color
@@ -254,8 +253,8 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
         servidor.starttls()
         servidor.login(EMAIL_USER, EMAIL_PASS)
         
-        # AQUÍ ESTABA EL ERROR: Pasamos la variable en lugar del string quemado
-        servidor.sendmail(EMAIL_USER, [EMAIL_EXPANSION], mensaje.as_string())
+        # Correo enviado directamente a Expansión
+        servidor.sendmail(EMAIL_USER, ["dirmontajes@cosechasexpress.com"], mensaje.as_string())
         
         servidor.quit()
         print(f"✅ Correo de franquicia enviado exitosamente a: {EMAIL_EXPANSION}")
@@ -269,7 +268,7 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
 def enviar_correo_hoja_vida(nombre: str, celular: str, url_pdf: str, ciudad: str):
     mensaje = MIMEMultipart("alternative")
     mensaje['From'] = f"Talento Humano Cosechas <{EMAIL_USER}>"
-    mensaje['To'] = "3113816216juanjose@gmail.com"
+    mensaje['To'] = "seleccionpersonal@cerealesselecta.com"
     mensaje['Subject'] = f"📄 Nuevo Candidato Sede Corporativa - {nombre}"
 
     cuerpo_html = f"""
@@ -316,7 +315,7 @@ def enviar_correo_hoja_vida(nombre: str, celular: str, url_pdf: str, ciudad: str
         servidor = smtplib.SMTP('smtp.gmail.com', 587)
         servidor.starttls()
         servidor.login(EMAIL_USER, EMAIL_PASS)
-        servidor.sendmail(EMAIL_USER, ["3113816216juanjose@gmail.com"], mensaje.as_string())
+        servidor.sendmail(EMAIL_USER, ["seleccionpersonal@cerealesselecta.com"], mensaje.as_string())
         servidor.quit()
         print(f"✅ Correo de RRHH enviado exitosamente a: 3113816216juanjose@gmail.com")
     except smtplib.SMTPException as e:
