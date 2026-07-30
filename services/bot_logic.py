@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from config import supabase, EMAIL_USER, EMAIL_JEFE, EMAIL_COORD_SAC, EMAIL_CAPACITADORA, EMAIL_SISTEMAS, EMAIL_GERENCIA_JURIDICA, R2_PUBLIC_URL
 from services.email_service import enviar_correo_pqrs_franquiciado, enviar_correo_pqrs_interno, enviar_correo_nueva_franquicia, enviar_correo_hoja_vida
-from services.location_service import encontrar_sede_mas_cercana
-from services.location_service import encontrar_sede_mas_cercana
+from services.location_service import analizar_ubicacion_sedes
+from services.location_service import analizar_ubicacion_sedes
 
 def guardar_lead_franquicia(celular, datos):
     try:
@@ -203,31 +203,108 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 lat = float(coordenadas[0])
                 lon = float(coordenadas[1])
                 
-                sede = encontrar_sede_mas_cercana(lat, lon)
+                sede_absoluta, sede_dom = analizar_ubicacion_sedes(lat, lon, 10.0)
                 
-                if sede:
+                if sede_absoluta:
                     try:
                         supabase.table("registros_domicilios").insert({
-                            "nombre_sede": sede.get('ceco_nombre', 'Sede Cosechas')
+                            "nombre_sede": sede_absoluta.get('ceco_nombre', 'Sede Cosechas')
                         }).execute()
                     except Exception as e:
                         print(f"Error guardando analítica de domicilio: {e}")
-
-                    maps_url = f"https://www.google.com/maps/search/?api=1&query={sede['latitud']},{sede['longitud']}"
-                    telefono = sede.get('pdv_celular') or sede.get('pdv_telefono') or 'No disponible'
-                    respuesta_bot = (
-                        f"📍 *Sede Cosechas más cercana encontrada:*\n\n"
-                        f"🏪 *{sede.get('ceco_nombre', 'Sede Cosechas')}*\n"
-                        f"📏 A tan solo *{sede['distancia_km']} km* de tu ubicación.\n"
-                        f"📞 Teléfono Domicilios: {telefono}\n"
-                        f"🗺️ Dirección: {sede.get('pdv_direccion', 'No disponible')}\n\n"
-                        f"👉 *¿Cómo llegar?* Toca el enlace para abrir el mapa:\n{maps_url}\n\n"
-                        "¿Deseas consultar algo más?"
-                    )
-                else:
-                    respuesta_bot = "Lo siento, en este momento no tenemos sedes registradas en nuestro sistema. 😔\n¿Deseas consultar algo más?"
+                        
+                    def format_opciones(s):
+                        cel = s.get('pdv_celular') or s.get('pdv_telefono')
+                        rapp = str(s.get('pdv_aplicacion_rappi', '')).strip().title()
+                        out = []
+                        if cel and str(cel).lower() != 'no': out.append(f"  • Domicilio Propio: {cel}")
+                        if rapp in ['Rappi', 'Didi', 'Ambos']: out.append(f"  • Plataformas: {rapp}")
+                        return "
+".join(out)
+                        
+                    maps_url_abs = f"https://www.google.com/maps/search/?api=1&query={sede_absoluta['latitud']},{sede_absoluta['longitud']}"
                     
-                estado_actual = "menu_opciones"
+                    opciones_abs = format_opciones(sede_absoluta)
+                    
+                    if opciones_abs:
+                        respuesta_bot = (
+                            f"🛵 *Sede Cosechas más cercana encontrada:*
+
+"
+                            f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*
+"
+                            f"📏 A tan solo *{sede_absoluta['distancia_km']} km* de tu ubicación.
+"
+                            f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}
+
+"
+                            f"🛵 *Opciones de envío:*
+{opciones_abs}
+
+"
+                            f"🧭 *¿Cómo llegar?* Toca el enlace para abrir el mapa:
+{maps_url_abs}
+
+"
+                            "¿Deseas consultar algo más?"
+                        )
+                    else:
+                        if sede_dom and sede_dom['ceco_nombre'] != sede_absoluta['ceco_nombre']:
+                            maps_url_dom = f"https://www.google.com/maps/search/?api=1&query={sede_dom['latitud']},{sede_dom['longitud']}"
+                            opciones_dom = format_opciones(sede_dom)
+                            
+                            respuesta_bot = (
+                                f"🛵 *Sede Cosechas más cercana:*
+"
+                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* (a {sede_absoluta['distancia_km']} km)
+"
+                                f"⚠️ Esta sede actualmente no cuenta con servicio a domicilio.
+
+"
+                                f"✅ *La sede con domicilio más cercana a ti es:*
+"
+                                f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*
+"
+                                f"📏 A *{sede_dom['distancia_km']} km* de tu ubicación.
+"
+                                f"🗺️ Dirección: {sede_dom.get('pdv_direccion', 'No disponible')}
+
+"
+                                f"🛵 *Opciones de envío:*
+{opciones_dom}
+
+"
+                                f"🧭 *Ubicación Sede con Domicilio:*
+{maps_url_dom}
+
+"
+                                "¿Deseas consultar algo más?"
+                            )
+                        else:
+                            respuesta_bot = (
+                                f"🛵 *Sede Cosechas más cercana:*
+
+"
+                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*
+"
+                                f"📏 A *{sede_absoluta['distancia_km']} km* de tu ubicación.
+"
+                                f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}
+
+"
+                                f"⚠️ *Lo sentimos, no hemos encontrado opciones de domicilio para las sedes cercanas (menos de 10km).*
+
+"
+                                f"🧭 *Ubicación:*
+{maps_url_abs}
+
+"
+                                "¿Deseas consultar algo más?"
+                            )
+                else:
+                    respuesta_bot = "Lo siento, en este momento no tenemos sedes registradas en nuestro sistema. 🛵
+¿Deseas consultar algo más?"
+estado_actual = "menu_opciones"
                 botones_bot = ["Menú y Precios", "Menú Principal", "Finalizar"]
                 
             except Exception as e:
@@ -668,7 +745,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 botones_bot = ["Menú Principal", "Finalizar"]
             else:
                 estado_actual = "esperando_local_franquicia"
-                respuesta_bot = "¿Ya tienes un local o zona identificada para abrir?"
+                respuesta_bot = "¿Ya tienes un local identificado para abrir?"
                 botones_bot = ["Sí", "No"]
         else:
             respuesta_bot = "⚠️ Por favor selecciona una opción:"
@@ -682,7 +759,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             
             if val == "No":
                 estado_actual = "esperando_contacto_sin_local_franquicia"
-                respuesta_bot = "Muchas gracias, tus datos han sido tomados de igual forma.\n\nTen en cuenta que en Cosechas no nos hacemos cargo de la búsqueda del local.\n\n¿Deseas que un agente se comunique contigo?"
+                respuesta_bot = "Muchas gracias, tus datos han sido tomados.\n\nTen en cuenta que en Cosechas no nos hacemos cargo de la búsqueda del local.\n\n¿Deseas que un agente se comunique contigo?"
                 botones_bot = ["Contactarme", "Menú Principal", "Finalizar"]
             else:
                 estado_actual = "esperando_direccion_local_franquicia"
