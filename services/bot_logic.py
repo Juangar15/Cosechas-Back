@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from config import supabase, EMAIL_USER, R2_PUBLIC_URL
+from config import supabase, SMTP_USER, R2_PUBLIC_URL
 from services.email_service import enviar_correo_pqrs_franquiciado, enviar_correo_pqrs_interno, enviar_correo_nueva_franquicia, enviar_correo_hoja_vida
 from services.location_service import analizar_ubicacion_sedes
 from services.location_service import analizar_ubicacion_sedes
@@ -341,7 +341,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
     elif estado_actual == "esperando_barrio_pqrs":
         if texto == "sedes generales":
             datos_pqrs["nit"] = None 
-            datos_pqrs["correo_franquiciado"] = EMAIL_USER
+            datos_pqrs["correo_franquiciado"] = SMTP_USER
             datos_pqrs["local"] = "Sedes Generales"
             estado_actual = "esperando_tipo_reporte"
             respuesta_bot = "Entendido. Radicaremos el reporte a nivel general.\n\n¿Qué tipo de reporte deseas realizar?"
@@ -400,7 +400,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 franquicia = res_db.data[0]
                 datos_pqrs["nit"] = franquicia.get("tercero_nit", "SIN_NIT")
                 datos_pqrs["local"] = franquicia.get("ceco_nombre", "Sede Desconocida")
-                datos_pqrs["correo_franquiciado"] = franquicia.get("admin_correo") or EMAIL_USER
+                datos_pqrs["correo_franquiciado"] = franquicia.get("admin_correo") or SMTP_USER
                 
                 estado_actual = "esperando_tipo_reporte"
                 respuesta_bot = f"✅ Sede confirmada: {franquicia.get('ceco_nombre', '')}.\n\n¿Qué tipo de reporte deseas realizar?"
@@ -557,7 +557,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         else:
             tiene_foto = texto.split("]:")[1] if "]:" in texto else texto
             
-            correo_f = datos_pqrs.get("correo_franquiciado", EMAIL_USER)
+            correo_f = datos_pqrs.get("correo_franquiciado", SMTP_USER)
             local_nombre = datos_pqrs.get("local", "Cosechas")
             nit_guardar = datos_pqrs.get("nit")
             nombre_cliente = datos_pqrs.get("nombre_cliente", "No especificado")
@@ -622,7 +622,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         else:
             return "⚠️ No detecté una imagen válida.\n\nPor favor, envía la fotografía real, o utiliza las opciones en pantalla:", ["Saltar Foto", "Volver"], None
 
-        correo_f = datos_pqrs.get("correo_franquiciado", EMAIL_USER)
+        correo_f = datos_pqrs.get("correo_franquiciado", SMTP_USER)
         tipo = datos_pqrs.get("tipo", "No especificado")
         tipo_reporte = datos_pqrs.get("tipo_reporte", "Novedad")
         motivo = datos_pqrs.get("motivo", None)

@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import urllib.parse
 # Importamos las variables de correo principal
-from config import EMAIL_USER, EMAIL_PASS 
+from config import SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASS 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 def log_retry_email(retry_state):
@@ -13,7 +13,7 @@ def log_retry_email(retry_state):
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
 def enviar_correo_pqrs_franquiciado(destinatario: str, radicado: str, tipo: str, detalle: str, local: str, celular: str, correo_interno: str, nombre_area: str, nombre_cliente: str, correo_cliente: str):
     mensaje = MIMEMultipart("alternative")
-    mensaje['From'] = f"Cosechas PQRS <{EMAIL_USER}>"
+    mensaje['From'] = f"Cosechas PQRS <{SMTP_USER}>"
     mensaje['To'] = destinatario 
     mensaje['Subject'] = f"🟢 Nuevo Reporte PQRS #{radicado} - {local} ({tipo})"
     mensaje['Date'] = email.utils.formatdate(localtime=True)
@@ -89,10 +89,10 @@ def enviar_correo_pqrs_franquiciado(destinatario: str, radicado: str, tipo: str,
     """
     mensaje.attach(MIMEText(cuerpo_html, 'html'))
     try:
-        servidor = smtplib.SMTP('smtp.gmail.com', 587)
+        servidor = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         servidor.starttls()
-        servidor.login(EMAIL_USER, EMAIL_PASS)
-        servidor.sendmail(EMAIL_USER, [destinatario.strip()], mensaje.as_string())
+        servidor.login(SMTP_USER, SMTP_PASS)
+        servidor.sendmail(SMTP_USER, [destinatario.strip()], mensaje.as_string())
         servidor.quit()
         return True
     except Exception as e:
@@ -102,7 +102,7 @@ def enviar_correo_pqrs_franquiciado(destinatario: str, radicado: str, tipo: str,
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
 def enviar_correo_pqrs_interno(destinatarios: str, radicado: str, tipo: str, detalle: str, local: str, celular: str, nombre_area: str, nombre_cliente: str, correo_cliente: str):
     mensaje = MIMEMultipart("alternative")
-    mensaje['From'] = f"Cosechas PQRS <{EMAIL_USER}>"
+    mensaje['From'] = f"Cosechas PQRS <{SMTP_USER}>"
     mensaje['To'] = destinatarios 
     mensaje['Subject'] = f"🟢 Nuevo Reporte Asignado #{radicado} - {local} ({tipo})"
     mensaje['Date'] = email.utils.formatdate(localtime=True)
@@ -164,11 +164,11 @@ def enviar_correo_pqrs_interno(destinatarios: str, radicado: str, tipo: str, det
     """
     mensaje.attach(MIMEText(cuerpo_html, 'html'))
     try:
-        servidor = smtplib.SMTP('smtp.gmail.com', 587)
+        servidor = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         servidor.starttls()
-        servidor.login(EMAIL_USER, EMAIL_PASS)
+        servidor.login(SMTP_USER, SMTP_PASS)
         lista_destinatarios = [c.strip() for c in destinatarios.split(",")]
-        servidor.sendmail(EMAIL_USER, lista_destinatarios, mensaje.as_string())
+        servidor.sendmail(SMTP_USER, lista_destinatarios, mensaje.as_string())
         servidor.quit()
         print(f"✅ Correo HTML enviado a internos: {destinatarios}")
         return True
@@ -180,7 +180,7 @@ def enviar_correo_pqrs_interno(destinatarios: str, radicado: str, tipo: str, det
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
 def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado: str, involucramiento: str, nombre: str, correo: str, tipo_franquicia: str, direccion_local: str, foto_local: str):
     mensaje = MIMEMultipart("alternative")
-    mensaje['From'] = f"Expansión Cosechas <{EMAIL_USER}>"
+    mensaje['From'] = f"Expansión Cosechas <{SMTP_USER}>"
     
     mensaje['To'] = "dirmontajes@cosechasexpress.com" 
     mensaje['Subject'] = f"🚀 Nuevo Lead de Franquicia ({tipo_franquicia}) - {ciudad}"
@@ -249,12 +249,12 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
     mensaje.attach(MIMEText(cuerpo_html, 'html'))
 
     try:
-        servidor = smtplib.SMTP('smtp.gmail.com', 587)
+        servidor = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         servidor.starttls()
-        servidor.login(EMAIL_USER, EMAIL_PASS)
+        servidor.login(SMTP_USER, SMTP_PASS)
         
         # Correo enviado directamente a Expansión
-        servidor.sendmail(EMAIL_USER, ["dirmontajes@cosechasexpress.com"], mensaje.as_string())
+        servidor.sendmail(SMTP_USER, ["dirmontajes@cosechasexpress.com"], mensaje.as_string())
         
         servidor.quit()
         print(f"✅ Correo de franquicia enviado exitosamente a: dirmontajes@cosechasexpress.com")
@@ -267,7 +267,7 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(smtplib.SMTPException), before_sleep=log_retry_email, reraise=True)
 def enviar_correo_hoja_vida(nombre: str, celular: str, url_pdf: str, ciudad: str):
     mensaje = MIMEMultipart("alternative")
-    mensaje['From'] = f"Talento Humano Cosechas <{EMAIL_USER}>"
+    mensaje['From'] = f"Talento Humano Cosechas <{SMTP_USER}>"
     mensaje['To'] = "seleccionpersonal@cerealesselecta.com"
     mensaje['Subject'] = f"📄 Nuevo Candidato Sede Corporativa - {nombre}"
 
@@ -312,10 +312,10 @@ def enviar_correo_hoja_vida(nombre: str, celular: str, url_pdf: str, ciudad: str
     mensaje.attach(MIMEText(cuerpo_html, 'html'))
 
     try:
-        servidor = smtplib.SMTP('smtp.gmail.com', 587)
+        servidor = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         servidor.starttls()
-        servidor.login(EMAIL_USER, EMAIL_PASS)
-        servidor.sendmail(EMAIL_USER, ["seleccionpersonal@cerealesselecta.com"], mensaje.as_string())
+        servidor.login(SMTP_USER, SMTP_PASS)
+        servidor.sendmail(SMTP_USER, ["seleccionpersonal@cerealesselecta.com"], mensaje.as_string())
         servidor.quit()
         print(f"✅ Correo de RRHH enviado exitosamente a: 3113816216juanjose@gmail.com")
     except smtplib.SMTPException as e:
