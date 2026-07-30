@@ -211,7 +211,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                             "nombre_sede": sede_absoluta.get('ceco_nombre', 'Sede Cosechas')
                         }).execute()
                     except Exception as e:
-                        print(f"Error guardando analítica de domicilio: {e}")
+                        pass
                         
                     def format_opciones(s):
                         cel = s.get('pdv_celular') or s.get('pdv_telefono')
@@ -219,8 +219,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                         out = []
                         if cel and str(cel).lower() != 'no': out.append(f"  • Domicilio Propio: {cel}")
                         if rapp in ['Rappi', 'Didi', 'Ambos']: out.append(f"  • Plataformas: {rapp}")
-                        return "
-".join(out)
+                        return "\n".join(out)
                         
                     maps_url_abs = f"https://www.google.com/maps/search/?api=1&query={sede_absoluta['latitud']},{sede_absoluta['longitud']}"
                     
@@ -228,24 +227,12 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     
                     if opciones_abs:
                         respuesta_bot = (
-                            f"🛵 *Sede Cosechas más cercana encontrada:*
-
-"
-                            f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*
-"
-                            f"📏 A tan solo *{sede_absoluta['distancia_km']} km* de tu ubicación.
-"
-                            f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}
-
-"
-                            f"🛵 *Opciones de envío:*
-{opciones_abs}
-
-"
-                            f"🧭 *¿Cómo llegar?* Toca el enlace para abrir el mapa:
-{maps_url_abs}
-
-"
+                            f"🛵 *Sede Cosechas más cercana encontrada:*\n\n"
+                            f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                            f"📏 A tan solo *{sede_absoluta['distancia_km']} km* de tu ubicación.\n"
+                            f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n\n"
+                            f"🛵 *Opciones de envío:*\n{opciones_abs}\n\n"
+                            f"🧭 *¿Cómo llegar?* Toca el enlace para abrir el mapa:\n{maps_url_abs}\n\n"
                             "¿Deseas consultar algo más?"
                         )
                     else:
@@ -254,57 +241,31 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                             opciones_dom = format_opciones(sede_dom)
                             
                             respuesta_bot = (
-                                f"🛵 *Sede Cosechas más cercana:*
-"
-                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* (a {sede_absoluta['distancia_km']} km)
-"
-                                f"⚠️ Esta sede actualmente no cuenta con servicio a domicilio.
-
-"
-                                f"✅ *La sede con domicilio más cercana a ti es:*
-"
-                                f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*
-"
-                                f"📏 A *{sede_dom['distancia_km']} km* de tu ubicación.
-"
-                                f"🗺️ Dirección: {sede_dom.get('pdv_direccion', 'No disponible')}
-
-"
-                                f"🛵 *Opciones de envío:*
-{opciones_dom}
-
-"
-                                f"🧭 *Ubicación Sede con Domicilio:*
-{maps_url_dom}
-
-"
+                                f"🛵 *Sede Cosechas más cercana:*\n"
+                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* (a {sede_absoluta['distancia_km']} km)\n"
+                                f"⚠️ Esta sede actualmente no cuenta con servicio a domicilio.\n\n"
+                                f"✅ *La sede con domicilio más cercana a ti es:*\n"
+                                f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                                f"📏 A *{sede_dom['distancia_km']} km* de tu ubicación.\n"
+                                f"🗺️ Dirección: {sede_dom.get('pdv_direccion', 'No disponible')}\n\n"
+                                f"🛵 *Opciones de envío:*\n{opciones_dom}\n\n"
+                                f"🧭 *Ubicación Sede con Domicilio:*\n{maps_url_dom}\n\n"
                                 "¿Deseas consultar algo más?"
                             )
                         else:
                             respuesta_bot = (
-                                f"🛵 *Sede Cosechas más cercana:*
-
-"
-                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*
-"
-                                f"📏 A *{sede_absoluta['distancia_km']} km* de tu ubicación.
-"
-                                f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}
-
-"
-                                f"⚠️ *Lo sentimos, no hemos encontrado opciones de domicilio para las sedes cercanas (menos de 10km).*
-
-"
-                                f"🧭 *Ubicación:*
-{maps_url_abs}
-
-"
+                                f"🛵 *Sede Cosechas más cercana:*\n\n"
+                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                                f"📏 A *{sede_absoluta['distancia_km']} km* de tu ubicación.\n"
+                                f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n\n"
+                                f"⚠️ *Lo sentimos, no hemos encontrado opciones de domicilio para las sedes cercanas (menos de 10km).*\n\n"
+                                f"🧭 *Ubicación:*\n{maps_url_abs}\n\n"
                                 "¿Deseas consultar algo más?"
                             )
                 else:
-                    respuesta_bot = "Lo siento, en este momento no tenemos sedes registradas en nuestro sistema. 🛵
-¿Deseas consultar algo más?"
-estado_actual = "menu_opciones"
+                    respuesta_bot = "Lo siento, en este momento no tenemos sedes registradas en nuestro sistema. 🛵\n¿Deseas consultar algo más?"
+
+                estado_actual = "menu_opciones"
                 botones_bot = ["Menú y Precios", "Menú Principal", "Finalizar"]
                 
             except Exception as e:
