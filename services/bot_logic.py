@@ -101,6 +101,11 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
 
     respuesta_bot = "Lo siento, ocurrió un error interno. Escribe 'Hola' para reiniciar."
 
+    # Interceptar atajo de domicilio antes de la máquina de estados
+    if estado_actual == "menu_opciones" and texto == "consultar domicilio" and "horario_sede_lat" in datos_pqrs:
+        estado_actual = "esperando_ubicacion"
+        texto = f"[atajo_domicilio]:{datos_pqrs['horario_sede_lat']},{datos_pqrs['horario_sede_lon']}"
+
     # --- PASO B: MÁQUINA DE ESTADOS LÓGICOS ---
     if estado_actual == "menu_principal":
         estado_actual = "esperando_terminos"
@@ -185,10 +190,6 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             )
             botones_bot = ["Volver"]
 
-        elif texto == "consultar domicilio" and "horario_sede_lat" in datos_pqrs:
-            estado_actual = "esperando_ubicacion"
-            texto = f"[atajo_domicilio]:{datos_pqrs['horario_sede_lat']},{datos_pqrs['horario_sede_lon']}"
-
         else:
             respuesta_bot = "⚠️ No logré entender eso. Por favor, selecciona una de las siguientes opciones desde el botón:"
             botones_bot = {
@@ -196,7 +197,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
             }
 
-    if estado_actual == "esperando_ubicacion":
+    elif estado_actual == "esperando_ubicacion":
         if texto == "directorio web":
             estado_actual = "menu_opciones"
             respuesta_bot = (
