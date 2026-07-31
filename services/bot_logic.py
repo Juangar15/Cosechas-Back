@@ -354,7 +354,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
     elif estado_actual == "seleccionando_sede_horario":
         if texto.startswith("hor_"):
             nombre_sede_seleccionada = texto.replace("hor_", "")
-            res_db = supabase.table("sedes_oficiales").select("*").eq("ceco_nombre", nombre_sede_seleccionada).execute()
+            res_db = supabase.table("sedes_oficiales").select("*").ilike("ceco_nombre", nombre_sede_seleccionada).execute()
             
             if res_db.data:
                 sede = res_db.data[0]
@@ -491,7 +491,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         if texto.startswith("tnd_"):
             nombre_sede_seleccionada = texto.replace("tnd_", "")
             
-            res_db = supabase.table("sedes_oficiales").select("*").eq("ceco_nombre", nombre_sede_seleccionada).execute()
+            res_db = supabase.table("sedes_oficiales").select("*").ilike("ceco_nombre", nombre_sede_seleccionada).execute()
             if res_db.data:
                 franquicia = res_db.data[0]
                 datos_pqrs["nit"] = franquicia.get("tercero_nit", "SIN_NIT")
