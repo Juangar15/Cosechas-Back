@@ -75,8 +75,18 @@ def parse_and_check_horario(horario_str: str) -> dict:
             h12 = h if 0 < h <= 12 else (12 if h == 0 else h - 12)
             return f"{h12:02d}:{m:02d} {period}"
             
-        # Transformar "Lunes-Sábado" a "Lunes a Sábado"
-        friendly_days = friendly_days.replace('-', ' a ')
+        # Transformar formatos como "Lunes-Domingo-Festivos" a "Lunes a Domingo y Festivos"
+        if ',' in friendly_days:
+            friendly_days = friendly_days.replace('-', ' a ')
+        else:
+            partes = [p.strip() for p in friendly_days.split('-')]
+            if len(partes) == 2:
+                friendly_days = f"{partes[0]} a {partes[1]}"
+            elif len(partes) >= 3:
+                friendly_days = f"{partes[0]} a {partes[1]} y {partes[-1]}"
+            else:
+                friendly_days = friendly_days.replace('-', ' a ')
+                
         friendly_parts.append(f"{friendly_days}: {to_12h(start_h, start_m)} a {to_12h(end_h, end_m)}")
 
     mensaje = "\n  • " + "\n  • ".join(friendly_parts) if friendly_parts else horario_str
