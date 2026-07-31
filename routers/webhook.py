@@ -90,7 +90,7 @@ async def recibir_mensajes_whatsapp_real(background_tasks: BackgroundTasks, payl
                                 
                             elif interactive_type == "list_reply":
                                 reply_id = mensaje_data["interactive"]["list_reply"].get("id", "")
-                                if reply_id.startswith("nit_"):
+                                if reply_id.startswith("nit_") or reply_id.startswith("tnd_") or reply_id.startswith("hor_"):
                                     texto_cliente = reply_id
                                 else:
                                     texto_cliente = mensaje_data["interactive"]["list_reply"].get("title", "")
