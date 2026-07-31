@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from config import supabase, SMTP_USER, R2_PUBLIC_URL
 from services.email_service import enviar_correo_pqrs_franquiciado, enviar_correo_pqrs_interno, enviar_correo_nueva_franquicia, enviar_correo_hoja_vida
 from services.location_service import analizar_ubicacion_sedes
-from services.location_service import analizar_ubicacion_sedes
+from services.time_utils import parse_and_check_horario
 
 def guardar_lead_franquicia(celular, datos):
     try:
@@ -81,7 +81,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             pass
         return "Menú Principal 🥤. Por favor, abre la lista y elige una opción:", {
             "tipo": "lista", "boton": "Seleccionar Opción",
-            "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
+            "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
         }, None
 
     despedidas = ["finalizar", "terminar", "cerrar", "chao", "adios", "hasta luego", "salir"]
@@ -119,7 +119,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "¡Perfecto! Gracias por confiar en nosotros. Por favor, despliega la lista y selecciona cómo te podemos ayudar hoy:"
             botones_bot = {
                 "tipo": "lista", "boton": "Opciones Cosechas",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
             }
         elif texto == "rechazar":
             estado_actual = "menu_principal"
@@ -133,7 +133,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "Menú Principal 🥤. Por favor, selecciona una opción de la lista:"
             botones_bot = {
                 "tipo": "lista", "boton": "Opciones Cosechas",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
             }
             
         elif texto == "menú y precios":
@@ -171,6 +171,11 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "¿Dónde te gustaría trabajar? Selecciona el área de tu interés:"
             botones_bot = ["Punto de Venta", "Planta Cosechas"]
 
+        elif texto == "horarios":
+            estado_actual = "esperando_barrio_horario"
+            respuesta_bot = "Para indicarte el horario de atención, por favor escríbeme en qué *ciudad y barrio* se encuentra la tienda (ejemplo: 'Medellín Laureles' o 'Bogotá Chapinero'):"
+            botones_bot = ["Volver"]
+
         elif texto == "franquicias col" or texto == "franquicias colombia":
             estado_actual = "esperando_nombre_franquicia"
             respuesta_bot = (
@@ -184,7 +189,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "⚠️ No logré entender eso. Por favor, selecciona una de las siguientes opciones desde el botón:"
             botones_bot = {
                 "tipo": "lista", "boton": "Ver Opciones",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Hoja de Vida", "Franquicias Col"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
             }
 
     elif estado_actual == "esperando_ubicacion":
@@ -240,11 +245,17 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     opciones_abs = format_opciones(sede_absoluta)
                     
                     if opciones_abs:
+                        estado_horario = parse_and_check_horario(sede_absoluta.get('pdv_horario', ''))
+                        msg_abierto = "" if estado_horario["abierto_ahora"] else f"⚠️ *Atención: La sede se encuentra cerrada en este momento.*\n"
+                        msg_horario = f"⏳ *Horario:* {estado_horario['mensaje_amigable']}\n\n"
+
                         respuesta_bot = (
                             f"🛵 *Sede Cosechas más cercana encontrada:*\n\n"
                             f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                            f"{msg_abierto}"
                             f"📏 A tan solo *{sede_absoluta['distancia_km']} km* de tu ubicación.\n"
-                            f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n\n"
+                            f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n"
+                            f"{msg_horario}"
                             f"🛵 *Opciones de envío:*\n{opciones_abs}\n\n"
                             f"🧭 *¿Cómo llegar?* Toca el enlace para abrir el mapa:\n{maps_url_abs}\n\n"
                             "¿Deseas consultar algo más?"
@@ -254,14 +265,20 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                             maps_url_dom = f"https://www.google.com/maps/search/?api=1&query={sede_dom['latitud']},{sede_dom['longitud']}"
                             opciones_dom = format_opciones(sede_dom)
                             
+                            estado_horario_dom = parse_and_check_horario(sede_dom.get('pdv_horario', ''))
+                            msg_abierto_dom = "" if estado_horario_dom["abierto_ahora"] else f"⚠️ *Atención: La sede se encuentra cerrada en este momento.*\n"
+                            msg_horario_dom = f"⏳ *Horario:* {estado_horario_dom['mensaje_amigable']}\n\n"
+                            
                             respuesta_bot = (
                                 f"🛵 *Sede Cosechas más cercana:*\n"
                                 f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* (a {sede_absoluta['distancia_km']} km)\n"
                                 f"⚠️ Esta sede actualmente no cuenta con servicio a domicilio.\n\n"
                                 f"✅ *La sede con domicilio más cercana a ti es:*\n"
                                 f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                                f"{msg_abierto_dom}"
                                 f"📏 A *{sede_dom['distancia_km']} km* de tu ubicación.\n"
-                                f"🗺️ Dirección: {sede_dom.get('pdv_direccion', 'No disponible')}\n\n"
+                                f"🗺️ Dirección: {sede_dom.get('pdv_direccion', 'No disponible')}\n"
+                                f"{msg_horario_dom}"
                                 f"🛵 *Opciones de envío:*\n{opciones_dom}\n\n"
                                 f"🧭 *Ubicación Sede con Domicilio:*\n{maps_url_dom}\n\n"
                                 "¿Deseas consultar algo más?"
@@ -290,6 +307,83 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "⚠️ No detecté una ubicación válida.\n\nPor favor, usa el ícono del clip 📎 para compartir tu 'Ubicación actual', o toca 'Directorio Web' si estás en computador."
             botones_bot = ["Directorio Web", "Volver"]
 
+    # --- FLUJO DE HORARIOS ---
+    elif estado_actual == "esperando_barrio_horario":
+        try:
+            res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
+            todas = res.data
+            palabras = [p.strip() for p in texto.lower().replace(',', ' ').split() if len(p.strip()) > 2]
+            if not palabras: palabras = [texto.lower().strip()]
+            
+            tiendas = []
+            for s in todas:
+                target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
+                if all(word in target for word in palabras):
+                    tiendas.append(s)
+        except Exception as e:
+            print("Error Búsqueda Supabase Horarios:", e)
+            tiendas = []
+
+        if tiendas:
+            estado_actual = "seleccionando_sede_horario"
+            opciones_lista = []
+            for t in tiendas[:10]: 
+                nombre_db = t.get("ceco_nombre") or "Sede Cosechas"
+                ciudad_db = t.get("pdv_ciudad") or ""
+                dir_db = t.get("pdv_direccion") or ""
+                
+                nombre = str(nombre_db)[:24]
+                desc = f"{ciudad_db} - {dir_db}"[:72]
+                
+                opciones_lista.append({
+                    "id": f"hor_{nombre_db}"[:200],
+                    "title": nombre,
+                    "description": desc
+                })
+            
+            respuesta_bot = f"Encontramos estas opciones cercanas a '{texto_usuario}'. Despliega el menú y selecciona la sede para conocer su horario:"
+            botones_bot = {
+                "tipo": "lista", 
+                "boton": "Ver Tiendas",
+                "opciones": opciones_lista
+            }
+        else:
+            respuesta_bot = "No encontré tiendas con esa ubicación. ¿Puedes intentar con otro barrio o ciudad?"
+            botones_bot = ["Volver"]
+
+    elif estado_actual == "seleccionando_sede_horario":
+        if texto.startswith("hor_"):
+            nombre_sede_seleccionada = texto.replace("hor_", "")
+            res_db = supabase.table("sedes_oficiales").select("*").eq("ceco_nombre", nombre_sede_seleccionada).execute()
+            
+            if res_db.data:
+                sede = res_db.data[0]
+                estado_horario = parse_and_check_horario(sede.get("pdv_horario", ""))
+                msg_abierto = "✅ *¡Estamos abiertos ahora!*" if estado_horario["abierto_ahora"] else "⚠️ *Actualmente nos encontramos cerrados.*"
+                
+                lat = sede.get('latitud')
+                lon = sede.get('longitud')
+                maps_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}" if lat and lon else ""
+                map_str = f"📍 *Ubicación:* {maps_url}\n\n" if maps_url else ""
+                
+                respuesta_bot = (
+                    f"🏪 *{sede.get('ceco_nombre', 'Sede Cosechas')}*\n\n"
+                    f"{msg_abierto}\n\n"
+                    f"⏳ *Horario de Atención:*\n{estado_horario['mensaje_amigable']}\n\n"
+                    f"🗺️ *Dirección:* {sede.get('pdv_direccion', 'No especificada')}\n"
+                    f"{map_str}"
+                    "¿Deseas consultar algo más?"
+                )
+                estado_actual = "menu_opciones"
+                botones_bot = ["Menú Principal", "Domicilios", "Finalizar"]
+            else:
+                respuesta_bot = "No logré identificar la sede. Por favor, intenta de nuevo."
+                botones_bot = ["Volver"]
+        else:
+            respuesta_bot = "⚠️ Por favor, selecciona una de las sedes de la lista:"
+            botones_bot = ["Volver"]
+
+    # --- FLUJO DE HOJAS DE VIDA ---
     elif estado_actual == "esperando_tipo_menu":
         if texto == "nacional (es)": 
             estado_actual = "menu_opciones"
