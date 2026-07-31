@@ -225,11 +225,13 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                             out.append(f"  • Domicilio Propio: {cel}")
                             
                         if tiene_app:
-                            texto_plat = "las plataformas" if rapp == 'Ambos' else f"la plataforma {rapp}"
+                            nombres_plat = "Rappi y Didi" if rapp == 'Ambos' else rapp
+                            texto_plat = "las plataformas Rappi y Didi" if rapp == 'Ambos' else f"la plataforma {rapp}"
+                            
                             if not tiene_propio:
                                 out.append(f"  • Puedes encontrarnos a través de {texto_plat}.")
                             else:
-                                out.append(f"  • Plataformas: {rapp}")
+                                out.append(f"  • Plataformas: {nombres_plat}")
                                 
                         return "\\n".join(out)
                         
