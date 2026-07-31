@@ -185,6 +185,10 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             )
             botones_bot = ["Volver"]
 
+        elif texto == "consultar domicilio" and "horario_sede_lat" in datos_pqrs:
+            estado_actual = "esperando_ubicacion"
+            texto = f"[ubicacion]:{datos_pqrs['horario_sede_lat']},{datos_pqrs['horario_sede_lon']}"
+
         else:
             respuesta_bot = "⚠️ No logré entender eso. Por favor, selecciona una de las siguientes opciones desde el botón:"
             botones_bot = {
@@ -192,7 +196,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
             }
 
-    elif estado_actual == "esperando_ubicacion":
+    if estado_actual == "esperando_ubicacion":
         if texto == "directorio web":
             estado_actual = "menu_opciones"
             respuesta_bot = (
@@ -375,7 +379,10 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     "¿Deseas consultar algo más?"
                 )
                 estado_actual = "menu_opciones"
-                botones_bot = ["Menú Principal", "Domicilios", "Finalizar"]
+                botones_bot = ["Menú Principal", "Consultar Domicilio", "Finalizar"]
+                if lat and lon:
+                    datos_pqrs["horario_sede_lat"] = lat
+                    datos_pqrs["horario_sede_lon"] = lon
             else:
                 respuesta_bot = "No logré identificar la sede. Por favor, intenta de nuevo."
                 botones_bot = ["Volver"]
