@@ -187,7 +187,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
 
         elif texto == "consultar domicilio" and "horario_sede_lat" in datos_pqrs:
             estado_actual = "esperando_ubicacion"
-            texto = f"[ubicacion]:{datos_pqrs['horario_sede_lat']},{datos_pqrs['horario_sede_lon']}"
+            texto = f"[atajo_domicilio]:{datos_pqrs['horario_sede_lat']},{datos_pqrs['horario_sede_lon']}"
 
         else:
             respuesta_bot = "⚠️ No logré entender eso. Por favor, selecciona una de las siguientes opciones desde el botón:"
@@ -206,7 +206,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             )
             botones_bot = ["Menú Principal", "Finalizar"]
             
-        elif "[ubicacion]:" in texto:
+        elif "[ubicacion]:" in texto or "[atajo_domicilio]:" in texto:
+            is_atajo = "[atajo_domicilio]:" in texto
             try:
                 coordenadas = texto.split("]:")[1].split(",")
                 lat = float(coordenadas[0])
@@ -253,17 +254,27 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                         msg_abierto = "" if estado_horario["abierto_ahora"] else f"⚠️ *Atención: La sede se encuentra cerrada en este momento.*\n"
                         msg_horario = f"⏳ *Horario:* {estado_horario['mensaje_amigable']}\n\n"
 
-                        respuesta_bot = (
-                            f"🛵 *Sede Cosechas más cercana encontrada:*\n\n"
-                            f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*\n"
-                            f"{msg_abierto}"
-                            f"📏 A tan solo *{sede_absoluta['distancia_km']} km* de tu ubicación.\n"
-                            f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n"
-                            f"{msg_horario}"
-                            f"🛵 *Opciones de envío:*\n{opciones_abs}\n\n"
-                            f"🧭 *¿Cómo llegar?* Toca el enlace para abrir el mapa:\n{maps_url_abs}\n\n"
-                            "¿Deseas consultar algo más?"
-                        )
+                        if is_atajo:
+                            respuesta_bot = (
+                                f"🛵 *Opciones de domicilio para {sede_absoluta.get('ceco_nombre', 'esta sede')}*\n\n"
+                                f"{msg_abierto}"
+                                f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n"
+                                f"{msg_horario}"
+                                f"🛵 *Opciones de envío:*\n{opciones_abs}\n\n"
+                                "¿Deseas consultar algo más?"
+                            )
+                        else:
+                            respuesta_bot = (
+                                f"🛵 *Sede Cosechas más cercana encontrada:*\n\n"
+                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                                f"{msg_abierto}"
+                                f"📏 A tan solo *{sede_absoluta['distancia_km']} km* de tu ubicación.\n"
+                                f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n"
+                                f"{msg_horario}"
+                                f"🛵 *Opciones de envío:*\n{opciones_abs}\n\n"
+                                f"🧭 *¿Cómo llegar?* Toca el enlace para abrir el mapa:\n{maps_url_abs}\n\n"
+                                "¿Deseas consultar algo más?"
+                            )
                     else:
                         if sede_dom and sede_dom['ceco_nombre'] != sede_absoluta['ceco_nombre']:
                             maps_url_dom = f"https://www.google.com/maps/search/?api=1&query={sede_dom['latitud']},{sede_dom['longitud']}"
@@ -273,30 +284,50 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                             msg_abierto_dom = "" if estado_horario_dom["abierto_ahora"] else f"⚠️ *Atención: La sede se encuentra cerrada en este momento.*\n"
                             msg_horario_dom = f"⏳ *Horario:* {estado_horario_dom['mensaje_amigable']}\n\n"
                             
-                            respuesta_bot = (
-                                f"🛵 *Sede Cosechas más cercana:*\n"
-                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* (a {sede_absoluta['distancia_km']} km)\n"
-                                f"⚠️ Esta sede actualmente no cuenta con servicio a domicilio.\n\n"
-                                f"✅ *La sede con domicilio más cercana a ti es:*\n"
-                                f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*\n"
-                                f"{msg_abierto_dom}"
-                                f"📏 A *{sede_dom['distancia_km']} km* de tu ubicación.\n"
-                                f"🗺️ Dirección: {sede_dom.get('pdv_direccion', 'No disponible')}\n"
-                                f"{msg_horario_dom}"
-                                f"🛵 *Opciones de envío:*\n{opciones_dom}\n\n"
-                                f"🧭 *Ubicación Sede con Domicilio:*\n{maps_url_dom}\n\n"
-                                "¿Deseas consultar algo más?"
-                            )
+                            if is_atajo:
+                                respuesta_bot = (
+                                    f"⚠️ La sede *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* no cuenta con servicio a domicilio.\n\n"
+                                    f"✅ *La sede con domicilio más cercana a esta es:*\n"
+                                    f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                                    f"{msg_abierto_dom}"
+                                    f"📏 A *{sede_dom['distancia_km']} km* de distancia.\n"
+                                    f"🗺️ Dirección: {sede_dom.get('pdv_direccion', 'No disponible')}\n"
+                                    f"{msg_horario_dom}"
+                                    f"🛵 *Opciones de envío:*\n{opciones_dom}\n\n"
+                                    f"🧭 *Ubicación Sede con Domicilio:*\n{maps_url_dom}\n\n"
+                                    "¿Deseas consultar algo más?"
+                                )
+                            else:
+                                respuesta_bot = (
+                                    f"🛵 *Sede Cosechas más cercana:*\n"
+                                    f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* (a {sede_absoluta['distancia_km']} km)\n"
+                                    f"⚠️ Esta sede actualmente no cuenta con servicio a domicilio.\n\n"
+                                    f"✅ *La sede con domicilio más cercana a ti es:*\n"
+                                    f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                                    f"{msg_abierto_dom}"
+                                    f"📏 A *{sede_dom['distancia_km']} km* de tu ubicación.\n"
+                                    f"🗺️ Dirección: {sede_dom.get('pdv_direccion', 'No disponible')}\n"
+                                    f"{msg_horario_dom}"
+                                    f"🛵 *Opciones de envío:*\n{opciones_dom}\n\n"
+                                    f"🧭 *Ubicación Sede con Domicilio:*\n{maps_url_dom}\n\n"
+                                    "¿Deseas consultar algo más?"
+                                )
                         else:
-                            respuesta_bot = (
-                                f"🛵 *Sede Cosechas más cercana:*\n\n"
-                                f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*\n"
-                                f"📏 A *{sede_absoluta['distancia_km']} km* de tu ubicación.\n"
-                                f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n\n"
-                                f"⚠️ *Lo sentimos, no hemos encontrado opciones de domicilio para las sedes cercanas (menos de 10km).*\n\n"
-                                f"🧭 *Ubicación:*\n{maps_url_abs}\n\n"
-                                "¿Deseas consultar algo más?"
-                            )
+                            if is_atajo:
+                                respuesta_bot = (
+                                    f"⚠️ *Lo sentimos, la sede {sede_absoluta.get('ceco_nombre', 'Sede Cosechas')} no cuenta con opciones de domicilio, y no hay otra sede cercana que sí lo tenga.*\n\n"
+                                    "¿Deseas consultar algo más?"
+                                )
+                            else:
+                                respuesta_bot = (
+                                    f"🛵 *Sede Cosechas más cercana:*\n\n"
+                                    f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}*\n"
+                                    f"📏 A *{sede_absoluta['distancia_km']} km* de tu ubicación.\n"
+                                    f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n\n"
+                                    f"⚠️ *Lo sentimos, no hemos encontrado opciones de domicilio para las sedes cercanas (menos de 10km).*\n\n"
+                                    f"🧭 *Ubicación:*\n{maps_url_abs}\n\n"
+                                    "¿Deseas consultar algo más?"
+                                )
                 else:
                     respuesta_bot = "Lo siento, en este momento no tenemos sedes registradas en nuestro sistema. 🛵\n¿Deseas consultar algo más?"
 

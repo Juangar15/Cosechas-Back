@@ -81,7 +81,10 @@ def parse_and_check_horario(horario_str: str) -> dict:
         else:
             partes = [p.strip() for p in friendly_days.split('-')]
             if len(partes) == 2:
-                friendly_days = f"{partes[0]} a {partes[1]}"
+                if partes[1].strip().lower() in ['festivos', 'festivo', 'f']:
+                    friendly_days = f"{partes[0]} y {partes[1]}"
+                else:
+                    friendly_days = f"{partes[0]} a {partes[1]}"
             elif len(partes) >= 3:
                 friendly_days = f"{partes[0]} a {partes[1]} y {partes[-1]}"
             else:
