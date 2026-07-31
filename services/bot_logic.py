@@ -353,7 +353,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             
             tiendas = []
             for s in todas:
-                target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
+                target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
                 if all(word in target for word in palabras):
                     tiendas.append(s)
         except Exception as e:
@@ -490,7 +490,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 
                 tiendas = []
                 for s in todas:
-                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
+                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
                     if all(word in target for word in palabras):
                         tiendas.append(s)
             except Exception as e:
@@ -553,7 +553,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 
                 tiendas = []
                 for s in todas:
-                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
+                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
                     if all(word in target for word in palabras):
                         tiendas.append(s)
             except Exception as e:
