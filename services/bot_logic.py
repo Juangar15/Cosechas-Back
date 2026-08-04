@@ -339,7 +339,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                             
                             if is_atajo:
                                 respuesta_bot = (
-                                    f"⚠️ La sede *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* no cuenta con servicio a domicilio.\n\n"
+                                    f"⚠️ La sede *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* no cuenta con servicio a domicilio.\n"
+                                    f"📍 Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n\n"
                                     f"✅ *La sede con domicilio más cercana a esta es:*\n"
                                     f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*\n"
                                     f"{msg_abierto_dom}"
@@ -354,6 +355,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                                 respuesta_bot = (
                                     f"🛵 *Sede Cosechas más cercana:*\n"
                                     f"📍 *{sede_absoluta.get('ceco_nombre', 'Sede Cosechas')}* (a {sede_absoluta['distancia_km']} km)\n"
+                                    f"🗺️ Dirección: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n"
                                     f"⚠️ Esta sede actualmente no cuenta con servicio a domicilio.\n\n"
                                     f"✅ *La sede con domicilio más cercana a ti es:*\n"
                                     f"📍 *{sede_dom.get('ceco_nombre', 'Sede Cosechas')}*\n"
@@ -368,7 +370,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                         else:
                             if is_atajo:
                                 respuesta_bot = (
-                                    f"⚠️ *Lo sentimos, la sede {sede_absoluta.get('ceco_nombre', 'Sede Cosechas')} no cuenta con opciones de domicilio, y no hay otra sede cercana que sí lo tenga.*\n\n"
+                                    f"⚠️ *Lo sentimos, la sede {sede_absoluta.get('ceco_nombre', 'Sede Cosechas')} no cuenta con opciones de domicilio, y no hay otra sede cercana que sí lo tenga.*\n"
+                                    f"📍 Dirección de esta sede: {sede_absoluta.get('pdv_direccion', 'No disponible')}\n\n"
                                     "¿Deseas consultar algo más?"
                                 )
                             else:
