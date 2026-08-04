@@ -46,10 +46,15 @@ def parse_and_check_horario(horario_str: str) -> dict:
             if len(subtokens) == 2:
                 # Rango tradicional (ej L-S)
                 start_d, end_d = subtokens[0], subtokens[1]
-                if start_d in dias_map and end_d in dias_map:
-                    s_idx, e_idx = dias_map[start_d], dias_map[end_d]
-                    if s_idx <= e_idx:
-                        for i in range(s_idx, e_idx + 1): active_days.add(i)
+                if f"{start_d}-{end_d}" in ["L-V", "L-S", "L-D", "M-S", "M-D", "M-V"]:
+                    if start_d in dias_map and end_d in dias_map:
+                        s_idx, e_idx = dias_map[start_d], dias_map[end_d]
+                        if s_idx <= e_idx:
+                            for i in range(s_idx, e_idx + 1): active_days.add(i)
+                else:
+                    # Se asumen como días sueltos (ej. MI-S -> Miércoles y Sábado)
+                    for st in subtokens:
+                        if st in dias_map: active_days.add(dias_map[st])
             elif len(subtokens) >= 3:
                 # Rango complejo (ej L-D-F o L-M-V)
                 if subtokens[0] == 'L' and subtokens[1] in ['S', 'D'] and subtokens[-1] == 'F':
@@ -86,7 +91,26 @@ def parse_and_check_horario(horario_str: str) -> dict:
                 is_open = True
                 
         # 3. Construir mensaje amigable
-        friendly_days = days_str_clean
+        friendly_parts_text = []
+        for part in [p.strip() for p in days_str_clean.replace(' ', '').split(',')]:
+            subtokens = part.split('-')
+            if len(subtokens) == 2:
+                if f"{subtokens[0]}-{subtokens[1]}" in ["L-V", "L-S", "L-D", "M-S", "M-D", "M-V"]:
+                    friendly_parts_text.append(f"{subtokens[0]} a {subtokens[1]}")
+                elif subtokens[1] == 'F':
+                    friendly_parts_text.append(f"{subtokens[0]} y Festivos")
+                else:
+                    friendly_parts_text.append(f"{subtokens[0]} y {subtokens[1]}")
+            elif len(subtokens) >= 3:
+                if subtokens[0] == 'L' and subtokens[1] in ['S', 'D'] and subtokens[-1] == 'F':
+                    friendly_parts_text.append(f"{subtokens[0]} a {subtokens[1]} y Festivos")
+                else:
+                    friendly_parts_text.append(", ".join(subtokens[:-1]) + f" y {subtokens[-1]}")
+            elif len(subtokens) == 1:
+                friendly_parts_text.append(subtokens[0])
+                
+        friendly_days = ", ".join(friendly_parts_text)
+        
         for code, name in day_replacements:
             # Usar delimitadores de letras para no sobreescribir partes de otras palabras
             friendly_days = re.sub(r'(?<![a-zA-ZáéíóúÁÉÍÓÚ])' + code + r'(?![a-zA-ZáéíóúÁÉÍÓÚ])', name, friendly_days)
@@ -95,25 +119,6 @@ def parse_and_check_horario(horario_str: str) -> dict:
             period = 'AM' if h < 12 else 'PM'
             h12 = h if 0 < h <= 12 else (12 if h == 0 else h - 12)
             return f"{h12:02d}:{m:02d} {period}"
-            
-        # Formatear la cadena final (e.g. Lunes a Domingo y Festivos)
-        if ',' in friendly_days:
-            friendly_days = friendly_days.replace('-', ' a ')
-        else:
-            partes = [p.strip() for p in friendly_days.split('-')]
-            if len(partes) == 2:
-                if partes[1].strip().lower() in ['festivos', 'festivo', 'f']:
-                    friendly_days = f"{partes[0]} y {partes[1]}"
-                else:
-                    friendly_days = f"{partes[0]} a {partes[1]}"
-            elif len(partes) >= 3:
-                # Verificar si es un rango como L-D-F (termina en festivo y el anterior es domingo/sabado)
-                if ("festivo" in partes[-1].lower() or "f" == partes[-1].lower()) and ("domingo" in partes[-2].lower() or "sábado" in partes[-2].lower()):
-                     friendly_days = f"{partes[0]} a {partes[1]} y {partes[-1]}"
-                else:
-                     friendly_days = ", ".join(partes[:-1]) + f" y {partes[-1]}"
-            else:
-                friendly_days = friendly_days.replace('-', ' a ')
                 
         friendly_parts.append(f"{friendly_days}: {to_12h(start_h, start_m)} a {to_12h(end_h, end_m)}")
 

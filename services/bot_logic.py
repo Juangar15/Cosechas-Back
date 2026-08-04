@@ -225,6 +225,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         lat_cliente = None
         lon_cliente = None
         is_atajo = False
+        respuesta_bot = None
         
         if "[ubicacion]:" in texto or "[atajo_domicilio]:" in texto:
             is_atajo = "[atajo_domicilio]:" in texto
@@ -235,9 +236,9 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             except:
                 pass
         elif len(texto) > 5 and texto not in ["volver", "menú principal", "finalizar"]:
-            # Validamos si la dirección tiene ciudad para evitar errores geográficos
+            # Validamos si la dirección tiene ciudad para evitar errores geográficos (incluyendo tiendas cerradas temporalmente)
             try:
-                res = supabase.table("sedes_oficiales").select("pdv_ciudad").eq('pdv_estado', 'OPERANDO').execute()
+                res = supabase.table("sedes_oficiales").select("pdv_ciudad").execute()
                 ciudades = {s['pdv_ciudad'].lower() for s in res.data if s.get('pdv_ciudad')}
             except:
                 ciudades = {"bogota", "medellin", "cali", "cartagena", "barranquilla"}
@@ -275,24 +276,21 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     def format_opciones(s):
                         cel = s.get('pdv_celular')
                         rapp = str(s.get('pdv_aplicacion_rappi', '')).strip().title()
-                        out = []
                         
                         tiene_propio = cel and str(cel).lower() != 'no'
                         tiene_app = rapp in ['Rappi', 'Didi', 'Ambos']
                         
                         if tiene_propio:
-                            out.append(f"  • Domicilio Propio: {cel}")
-                            
-                        if tiene_app:
-                            nombres_plat = "Rappi y Didi" if rapp == 'Ambos' else rapp
-                            texto_plat = "las plataformas Rappi y Didi" if rapp == 'Ambos' else f"la plataforma {rapp}"
-                            
-                            if not tiene_propio:
-                                out.append(f"  ⚠️ El punto de venta no cuenta con domicilio propio, pero cuenta con {texto_plat}.")
+                            if tiene_app:
+                                nombres_plat = "las plataformas Rappi y Didi" if rapp == 'Ambos' else f"la plataforma {rapp}"
+                                return f"  🛵 Esta sede cuenta con domicilio propio, puedes pedir al número: {cel}.\n  📱 Adicionalmente, puedes encontrarla en {nombres_plat}."
                             else:
-                                out.append(f"  • Plataformas: {nombres_plat}")
-                                
-                        return "\\n".join(out)
+                                return f"  🛵 Esta sede cuenta con domicilio propio, puedes pedir al número: {cel}."
+                        elif tiene_app:
+                            nombres_plat = "las plataformas Rappi y Didi" if rapp == 'Ambos' else f"la plataforma {rapp}"
+                            return f"  ⚠️ Esta sede no cuenta con domicilio propio, pero puedes pedir a través de {nombres_plat}."
+                            
+                        return ""
                         
                     maps_url_abs = f"https://www.google.com/maps/search/?api=1&query={sede_absoluta['latitud']},{sede_absoluta['longitud']}"
                     
@@ -387,9 +385,9 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 print(f"Error procesando ubicación: {e}")
                 respuesta_bot = "Hubo un error calculando la distancia. Intenta nuevamente o toca 'Volver'."
                 botones_bot = ["Volver"]
-        else:
-            respuesta_bot = "⚠️ No detecté una ubicación válida.\n\nPor favor, usa el ícono del clip 📎 para compartir tu 'Ubicación actual', o toca 'Directorio Web' si estás en computador."
-            botones_bot = ["Directorio Web", "Volver"]
+        elif not respuesta_bot:
+            respuesta_bot = "⚠️ No detecté una ubicación válida.\n\nPor favor, usa el ícono del clip 📎 para compartir tu 'Ubicación actual', o si estás en computador escribe tu dirección exacta y ciudad (ejemplo: 'Calle 10 # 5-20, Bogotá')."
+            botones_bot = ["Volver"]
 
     # --- FLUJO DE HORARIOS ---
     elif estado_actual == "esperando_barrio_horario":
