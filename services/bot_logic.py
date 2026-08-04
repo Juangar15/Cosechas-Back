@@ -659,14 +659,14 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             else:
                 estado_actual = "esperando_motivo_pqrs"
                 respuesta_bot = "Entendido. ¿Cuál es el motivo principal de tu reporte?"
-                botones_bot = ["Servicio", "Producto", "Servicio-Producto"]
+                botones_bot = ["Servicio", "Producto", "Otro"]
         else:
             respuesta_bot = "⚠️ Opción no reconocida. Por favor, elige una opción:"
             botones_bot = ["Inconformidad", "Sugerencia", "Felicitación"]
 
     elif estado_actual == "esperando_motivo_pqrs":
-        if texto in ["servicio", "producto", "servicio-producto"]:
-            motivo_seleccionado = "Servicio-Producto" if texto == "servicio-producto" else texto.capitalize()
+        if texto in ["servicio", "producto", "otro"]:
+            motivo_seleccionado = texto.capitalize()
             datos_pqrs["motivo"] = motivo_seleccionado
             estado_actual = "esperando_novedad_pqrs"
             
@@ -690,7 +690,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 }
         else:
             respuesta_bot = "⚠️ Opción no reconocida. Por favor, elige el motivo:"
-            botones_bot = ["Servicio", "Producto", "Servicio-Producto"]
+            botones_bot = ["Servicio", "Producto", "Otro"]
 
     elif estado_actual == "esperando_novedad_pqrs":
         opciones_validas = [
