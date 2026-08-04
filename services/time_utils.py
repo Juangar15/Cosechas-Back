@@ -17,9 +17,10 @@ def parse_and_check_horario(horario_str: str) -> dict:
     current_time = now.time()
 
     dias_map = {'L': 0, 'M': 1, 'MI': 2, 'J': 3, 'V': 4, 'S': 5, 'D': 6, 'F': 7}
-    
+
     # Extraer todos los rangos usando regex. Se captura días asegurando que inicie con letra. Y las horas opcionalmente con AM/PM
-    matches = re.findall(r'([LMIJVSDF][LMIJVSDF,\- ]*)\s+(\d{1,2}:\d{2}(?:\s*[APap][Mm])?)\s*[-a]\s*(\d{1,2}:\d{2}(?:\s*[APap][Mm])?)', horario_str.upper())
+    # Modificado para tolerar guiones o puntos como separadores de minutos (Ej. 20-00 en lugar de 20:00)
+    matches = re.findall(r'([LMIJVSDF][LMIJVSDF,\- ]*)\s+(\d{1,2}[:.\-]\d{2}(?:\s*[APap][Mm])?)\s*[-a]\s*(\d{1,2}[:.\-]\d{2}(?:\s*[APap][Mm])?)', horario_str.upper())
     
     is_open = False
     friendly_parts = []
@@ -69,6 +70,7 @@ def parse_and_check_horario(horario_str: str) -> dict:
             is_pm = 'PM' in t_str
             is_am = 'AM' in t_str
             t_clean = re.sub(r'[A-Z\s]', '', t_str)
+            t_clean = t_clean.replace('.', ':').replace('-', ':')
             h, m = map(int, t_clean.split(':'))
             # Ajuste de formato 24h
             if is_pm and h < 12: h += 12
