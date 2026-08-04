@@ -171,7 +171,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "¡Excelente elección! 🥤\n"
                 "Para brindarte una mejor experiencia, contamos con nuestras cartas en Español e Inglés.\n"
                 "*(Recuerda que aeropuertos y otras poblaciones como Leticia cuentan con un precio diferente)*\n\n"
-                "Sujeto a disponibilidad en punto de venta.\n\n"
+                "Productos sujetos a disponibilidad del punto de venta.\n\n"
                 "Por favor, abre la lista y selecciona el menú que deseas consultar:"
             )
             botones_bot = {
@@ -249,11 +249,16 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             ciudades_clean = {''.join(c for c in unicodedata.normalize('NFD', ciu) if unicodedata.category(c) != 'Mn') for ciu in ciudades}
             
             tiene_ciudad = any(c in txt_clean for c in ciudades_clean)
+            es_solo_ciudad = txt_clean in ciudades_clean
+            
             if not tiene_ciudad:
                 estado_actual = "esperando_ubicacion"
                 respuesta_bot = "⚠️ Para ubicarte con precisión, por favor asegúrate de incluir el nombre de tu ciudad en el mensaje (Ejemplo: Calle 10 # 5-20, Bogotá)."
                 botones_bot = ["Volver"]
-                
+            elif es_solo_ciudad:
+                estado_actual = "esperando_ubicacion"
+                respuesta_bot = "⚠️ Veo que me enviaste el nombre de la ciudad, pero necesito también tu dirección para saber qué sede te queda cerca (Ejemplo: Calle 10 # 5-20, Bogotá)."
+                botones_bot = ["Volver"]
             else:
                 from services.location_service import geocode_address
                 lat_cliente, lon_cliente = geocode_address(texto)
