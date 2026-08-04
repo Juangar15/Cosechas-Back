@@ -21,11 +21,15 @@ def normalizar_texto_busqueda(texto: str) -> list:
 
 def calcular_coincidencia(palabras_usuario, palabras_target):
     if not palabras_usuario: return 0
-    # Búsqueda substring: permite que 'hosp' coincida con 'hospital' o 'cl' con 'cll' dentro del target
+    # Búsqueda substring solo para palabras largas; palabras cortas (<= 3 chars) exigen coincidencia exacta
     coincidencias = 0
     for pu in palabras_usuario:
-        if any(pu in pt for pt in palabras_target):
-            coincidencias += 1
+        if len(pu) <= 3:
+            if pu in palabras_target:
+                coincidencias += 1
+        else:
+            if any(pu in pt for pt in palabras_target):
+                coincidencias += 1
     return coincidencias / len(palabras_usuario)
 
 def guardar_lead_franquicia(celular, datos):
