@@ -904,8 +904,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 estado_actual = "esperando_interes_pdf_franquicia"
                 respuesta_bot = "Te invito a revisar nuestra presentación oficial de franquicias.\n\nTras conocer nuestro modelo, ¿sigues interesado?"
                 documento_bot = {
-                    "url": f"{R2_PUBLIC_URL}/presentacion/PRESENTACION FRANQUICIAS 2026_v2.pdf",
-                    "nombre": "PRESENTACION FRANQUICIAS 2026_v2.pdf"
+                    "url": f"{R2_PUBLIC_URL}/presentacion/PRESENTACION FRANQUICIAS 2026_v4.pdf",
+                    "nombre": "PRESENTACION FRANQUICIAS 2026_v4.pdf"
                 }
                 botones_bot = ["Sí, estoy interesado", "No, gracias"]
         else:
