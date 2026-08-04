@@ -190,10 +190,10 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "Para mostrarte la sede, por favor envíame tu ubicación actual.\n\n"
                 "📱 *Si estás en celular:*\n"
                 "Toca el ícono del clip 📎 (o el +) y selecciona 'Ubicación'.\n\n"
-                "💻 *Si estás en computador (WhatsApp Web):*\n"
-                "Como no es posible enviar la ubicación desde el PC, toca el botón de abajo para ver nuestro directorio completo."
+                "💻 *Si no puedes enviarla o estás en computador:*\n"
+                "Escribe tu dirección exacta y ciudad (ejemplo: 'Calle 10 # 5-20, Bogotá')."
             )
-            botones_bot = ["Directorio Web", "Volver"]
+            botones_bot = ["Volver"]
 
         elif texto == "hoja de vida":
             estado_actual = "esperando_area_trabajo"
@@ -222,23 +222,48 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             }
 
     elif estado_actual == "esperando_ubicacion":
-        if texto == "directorio web":
-            estado_actual = "menu_opciones"
-            respuesta_bot = (
-                "🗺️ ¡Claro que sí! Puedes buscar la sede más cercana a tu ubicación en nuestro directorio web oficial:\n"
-                "👉 https://www.cosechasexpress.com/encuentranos/\n\n"
-                "¿Deseas consultar algo más?"
-            )
-            botones_bot = ["Menú Principal", "Finalizar"]
-            
-        elif "[ubicacion]:" in texto or "[atajo_domicilio]:" in texto:
+        lat_cliente = None
+        lon_cliente = None
+        is_atajo = False
+        
+        if "[ubicacion]:" in texto or "[atajo_domicilio]:" in texto:
             is_atajo = "[atajo_domicilio]:" in texto
             try:
                 coordenadas = texto.split("]:")[1].split(",")
-                lat = float(coordenadas[0])
-                lon = float(coordenadas[1])
+                lat_cliente = float(coordenadas[0])
+                lon_cliente = float(coordenadas[1])
+            except:
+                pass
+        elif len(texto) > 5 and texto not in ["volver", "menú principal", "finalizar"]:
+            # Validamos si la dirección tiene ciudad para evitar errores geográficos
+            try:
+                res = supabase.table("sedes_oficiales").select("pdv_ciudad").eq('pdv_estado', 'OPERANDO').execute()
+                ciudades = {s['pdv_ciudad'].lower() for s in res.data if s.get('pdv_ciudad')}
+            except:
+                ciudades = {"bogota", "medellin", "cali", "cartagena", "barranquilla"}
+            
+            import unicodedata
+            txt_clean = ''.join(c for c in unicodedata.normalize('NFD', texto.lower()) if unicodedata.category(c) != 'Mn')
+            ciudades_clean = {''.join(c for c in unicodedata.normalize('NFD', ciu) if unicodedata.category(c) != 'Mn') for ciu in ciudades}
+            
+            tiene_ciudad = any(c in txt_clean for c in ciudades_clean)
+            if not tiene_ciudad:
+                estado_actual = "esperando_ubicacion"
+                respuesta_bot = "⚠️ Para ubicarte con precisión, por favor asegúrate de incluir el nombre de tu ciudad en el mensaje (Ejemplo: Calle 10 # 5-20, Bogotá)."
+                botones_bot = ["Volver"]
+                return estado_actual, respuesta_bot, botones_bot, adjunto_bot
                 
-                sede_absoluta, sede_dom = analizar_ubicacion_sedes(lat, lon, 10.0)
+            from services.location_service import geocode_address
+            lat_cliente, lon_cliente = geocode_address(texto)
+            if not lat_cliente:
+                estado_actual = "esperando_ubicacion"
+                respuesta_bot = "❌ No pudimos encontrar esa dirección en el mapa. Por favor verifica que esté escrita correctamente junto con tu ciudad (Ejemplo: Calle 10 # 5-20, Bogotá)."
+                botones_bot = ["Volver"]
+                return estado_actual, respuesta_bot, botones_bot, adjunto_bot
+            
+        if lat_cliente and lon_cliente:
+            try:
+                sede_absoluta, sede_dom = analizar_ubicacion_sedes(lat_cliente, lon_cliente, 10.0)
                 
                 if sede_absoluta:
                     try:

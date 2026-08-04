@@ -1,5 +1,27 @@
 import math
 from config import supabase
+import urllib.parse
+import requests
+
+def geocode_address(query):
+    """
+    Usa la API de Esri (ArcGIS) World Geocoding Service para transformar una dirección en texto a Lat/Lon.
+    """
+    encoded_query = urllib.parse.quote(f"{query}, Colombia")
+    url = f"https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&maxLocations=1&singleLine={encoded_query}"
+    
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data and data.get('candidates') and len(data['candidates']) > 0:
+                lon = float(data['candidates'][0]['location']['x'])
+                lat = float(data['candidates'][0]['location']['y'])
+                return lat, lon
+    except Exception as e:
+        print(f"Error geocodificando '{query}': {e}")
+        
+    return None, None
 
 def calcular_distancia(lat1, lon1, lat2, lon2):
     """

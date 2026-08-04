@@ -41,17 +41,27 @@ def parse_and_check_horario(horario_str: str) -> dict:
         # 1. Parsear los días para la lógica
         parts = [p.strip() for p in days_str_clean.replace(' ', '').split(',')]
         for part in parts:
-            if '-' in part:
-                start_d, end_d = part.split('-', 1)
+            subtokens = part.split('-')
+            if len(subtokens) == 2:
+                # Rango tradicional (ej L-S)
+                start_d, end_d = subtokens[0], subtokens[1]
                 if start_d in dias_map and end_d in dias_map:
-                    s_idx = dias_map[start_d]
-                    e_idx = dias_map[end_d]
+                    s_idx, e_idx = dias_map[start_d], dias_map[end_d]
                     if s_idx <= e_idx:
-                        for i in range(s_idx, e_idx + 1):
-                            active_days.add(i)
-            else:
-                if part in dias_map:
-                    active_days.add(dias_map[part])
+                        for i in range(s_idx, e_idx + 1): active_days.add(i)
+            elif len(subtokens) >= 3:
+                # Rango complejo (ej L-D-F o L-M-V)
+                if subtokens[0] == 'L' and subtokens[1] in ['S', 'D'] and subtokens[-1] == 'F':
+                    # Es un rango "Lunes a Sab/Dom y Festivos"
+                    if 'L' in dias_map and subtokens[1] in dias_map:
+                        for i in range(dias_map['L'], dias_map[subtokens[1]] + 1): active_days.add(i)
+                    active_days.add(dias_map['F'])
+                else:
+                    # Se asumen como días sueltos (L-M-V -> Lunes, Martes y Viernes)
+                    for st in subtokens:
+                        if st in dias_map: active_days.add(dias_map[st])
+            elif len(subtokens) == 1:
+                if subtokens[0] in dias_map: active_days.add(dias_map[subtokens[0]])
         
         # 2. Parsear las horas para la lógica
         def parse_time(t_str):
@@ -95,7 +105,11 @@ def parse_and_check_horario(horario_str: str) -> dict:
                 else:
                     friendly_days = f"{partes[0]} a {partes[1]}"
             elif len(partes) >= 3:
-                friendly_days = f"{partes[0]} a {partes[1]} y {partes[-1]}"
+                # Verificar si es un rango como L-D-F (termina en festivo y el anterior es domingo/sabado)
+                if ("festivo" in partes[-1].lower() or "f" == partes[-1].lower()) and ("domingo" in partes[-2].lower() or "sábado" in partes[-2].lower()):
+                     friendly_days = f"{partes[0]} a {partes[1]} y {partes[-1]}"
+                else:
+                     friendly_days = ", ".join(partes[:-1]) + f" y {partes[-1]}"
             else:
                 friendly_days = friendly_days.replace('-', ' a ')
                 
