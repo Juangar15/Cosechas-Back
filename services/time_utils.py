@@ -4,7 +4,7 @@ import pytz
 
 def parse_and_check_horario(horario_str: str) -> dict:
     """
-    Analiza una cadena como 'L-S 08:00-20:00 - D 08:00-15:00'
+    Analiza una cadena como 'L-S 08:00 AM - 05:00 PM - D 08:00 AM a 03:00 PM'
     Retorna un diccionario con si está abierto ahora y el mensaje formateado amigable.
     """
     if not horario_str or str(horario_str).strip() == "" or str(horario_str).lower() == "n/a":
@@ -18,8 +18,8 @@ def parse_and_check_horario(horario_str: str) -> dict:
 
     dias_map = {'L': 0, 'M': 1, 'MI': 2, 'J': 3, 'V': 4, 'S': 5, 'D': 6, 'F': 7}
     
-    # Extraer todos los rangos usando regex: captura días (como L-S o L,M), y horas (como 08:00 y 20:00)
-    matches = re.findall(r'([LMIJVSDF,\- ]+)\s+(\d{1,2}:\d{2})\s*[-a]\s*(\d{1,2}:\d{2})', horario_str.upper())
+    # Extraer todos los rangos usando regex. Se captura días asegurando que inicie con letra. Y las horas opcionalmente con AM/PM
+    matches = re.findall(r'([LMIJVSDF][LMIJVSDF,\- ]*)\s+(\d{1,2}:\d{2}(?:\s*[APap][Mm])?)\s*[-a]\s*(\d{1,2}:\d{2}(?:\s*[APap][Mm])?)', horario_str.upper())
     
     is_open = False
     friendly_parts = []
@@ -27,7 +27,6 @@ def parse_and_check_horario(horario_str: str) -> dict:
     if not matches:
         return {"abierto_ahora": True, "mensaje_amigable": horario_str}
 
-    # Para el formateo amigable de los días
     day_replacements = [
         ('MI', 'Miércoles'), ('L', 'Lunes'), ('M', 'Martes'), 
         ('J', 'Jueves'), ('V', 'Viernes'), ('S', 'Sábado'), 
@@ -35,7 +34,8 @@ def parse_and_check_horario(horario_str: str) -> dict:
     ]
 
     for days_str, start_time_str, end_time_str in matches:
-        days_str_clean = days_str.strip()
+        # Strip caracteres que sobren en los bordes
+        days_str_clean = days_str.strip(' -,')
         active_days = set()
         
         # 1. Parsear los días para la lógica
@@ -54,11 +54,19 @@ def parse_and_check_horario(horario_str: str) -> dict:
                     active_days.add(dias_map[part])
         
         # 2. Parsear las horas para la lógica
-        start_h, start_m = map(int, start_time_str.split(':'))
-        end_h, end_m = map(int, end_time_str.split(':'))
-        
-        t_start = time(start_h, start_m)
-        t_end = time(end_h, end_m)
+        def parse_time(t_str):
+            t_str = t_str.strip()
+            is_pm = 'PM' in t_str
+            is_am = 'AM' in t_str
+            t_clean = re.sub(r'[A-Z\s]', '', t_str)
+            h, m = map(int, t_clean.split(':'))
+            # Ajuste de formato 24h
+            if is_pm and h < 12: h += 12
+            if is_am and h == 12: h = 0
+            return time(h, m), h, m
+            
+        t_start, start_h, start_m = parse_time(start_time_str)
+        t_end, end_h, end_m = parse_time(end_time_str)
         
         # Validar si está abierto hoy a esta hora
         if current_weekday in active_days:
@@ -68,14 +76,15 @@ def parse_and_check_horario(horario_str: str) -> dict:
         # 3. Construir mensaje amigable
         friendly_days = days_str_clean
         for code, name in day_replacements:
-            friendly_days = re.sub(r'(?<![A-Z])' + code + r'(?![A-Z])', name, friendly_days)
+            # Usar delimitadores de letras para no sobreescribir partes de otras palabras
+            friendly_days = re.sub(r'(?<![a-zA-ZáéíóúÁÉÍÓÚ])' + code + r'(?![a-zA-ZáéíóúÁÉÍÓÚ])', name, friendly_days)
             
         def to_12h(h, m):
             period = 'AM' if h < 12 else 'PM'
             h12 = h if 0 < h <= 12 else (12 if h == 0 else h - 12)
             return f"{h12:02d}:{m:02d} {period}"
             
-        # Transformar formatos como "Lunes-Domingo-Festivos" a "Lunes a Domingo y Festivos"
+        # Formatear la cadena final (e.g. Lunes a Domingo y Festivos)
         if ',' in friendly_days:
             friendly_days = friendly_days.replace('-', ' a ')
         else:

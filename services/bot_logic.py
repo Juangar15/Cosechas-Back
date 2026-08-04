@@ -3,6 +3,30 @@ from config import supabase, SMTP_USER, R2_PUBLIC_URL
 from services.email_service import enviar_correo_pqrs_franquiciado, enviar_correo_pqrs_interno, enviar_correo_nueva_franquicia, enviar_correo_hoja_vida
 from services.location_service import analizar_ubicacion_sedes
 from services.time_utils import parse_and_check_horario
+import unicodedata
+
+def normalizar_texto_busqueda(texto: str) -> list:
+    if not texto: return []
+    t = texto.lower().replace(',', ' ').replace('.', ' ')
+    t = ''.join(c for c in unicodedata.normalize('NFD', t) if unicodedata.category(c) != 'Mn')
+    reemplazos = {
+        "calle": "cl", "carrera": "cr", "avenida": "av", "hospital": "hosp", 
+        "centro comercial": "cc", "numero": "#", "nro": "#", "no": "#"
+    }
+    for k, v in reemplazos.items():
+        t = t.replace(k, v)
+    palabras = t.split()
+    relleno = {"con", "y", "de", "la", "el", "los", "las", "en", "un", "una"}
+    return [p for p in palabras if p not in relleno and len(p) > 1]
+
+def calcular_coincidencia(palabras_usuario, palabras_target):
+    if not palabras_usuario: return 0
+    # Búsqueda substring: permite que 'hosp' coincida con 'hospital' o 'cl' con 'cll' dentro del target
+    coincidencias = 0
+    for pu in palabras_usuario:
+        if any(pu in pt for pt in palabras_target):
+            coincidencias += 1
+    return coincidencias / len(palabras_usuario)
 
 def guardar_lead_franquicia(celular, datos):
     try:
@@ -81,7 +105,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             pass
         return "Menú Principal 🥤. Por favor, abre la lista y elige una opción:", {
             "tipo": "lista", "boton": "Seleccionar Opción",
-            "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
+            "opciones": ["Menú y Precios", "Radicar PQRS", "Info de Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
         }, None
 
     despedidas = ["finalizar", "terminar", "cerrar", "chao", "adios", "hasta luego", "salir"]
@@ -124,7 +148,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "¡Perfecto! Gracias por confiar en nosotros. Por favor, despliega la lista y selecciona cómo te podemos ayudar hoy:"
             botones_bot = {
                 "tipo": "lista", "boton": "Opciones Cosechas",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Info de Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
             }
         elif texto == "rechazar":
             estado_actual = "menu_principal"
@@ -138,7 +162,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "Menú Principal 🥤. Por favor, selecciona una opción de la lista:"
             botones_bot = {
                 "tipo": "lista", "boton": "Opciones Cosechas",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Info de Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
             }
             
         elif texto == "menú y precios":
@@ -159,11 +183,11 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "Para direccionar tu queja, escribe la *Ciudad y Barrio* donde ocurrió el suceso:"
             botones_bot = ["Sedes Generales", "Volver"]
             
-        elif texto == "domicilios":
+        elif texto in ["domicilios", "info de domicilios", "información de domicilios", "informacion de domicilios"]:
             estado_actual = "esperando_ubicacion"
             respuesta_bot = (
-                "¡Excelente! 🛵 Para mostrarte la sede con domicilios más cercana, "
-                "por favor envíame tu ubicación actual.\n\n"
+                "¡Excelente! 🛵 Nosotros no hacemos o no nos encargamos del domicilio, sino que te damos la información de domicilio de la tienda más cercana.\n\n"
+                "Para mostrarte la sede, por favor envíame tu ubicación actual.\n\n"
                 "📱 *Si estás en celular:*\n"
                 "Toca el ícono del clip 📎 (o el +) y selecciona 'Ubicación'.\n\n"
                 "💻 *Si estás en computador (WhatsApp Web):*\n"
@@ -194,7 +218,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "⚠️ No logré entender eso. Por favor, selecciona una de las siguientes opciones desde el botón:"
             botones_bot = {
                 "tipo": "lista", "boton": "Ver Opciones",
-                "opciones": ["Menú y Precios", "Radicar PQRS", "Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
+                "opciones": ["Menú y Precios", "Radicar PQRS", "Info de Domicilios", "Horarios", "Hoja de Vida", "Franquicias Col"]
             }
 
     elif estado_actual == "esperando_ubicacion":
@@ -240,7 +264,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                             texto_plat = "las plataformas Rappi y Didi" if rapp == 'Ambos' else f"la plataforma {rapp}"
                             
                             if not tiene_propio:
-                                out.append(f"  • Puedes encontrarnos a través de {texto_plat}.")
+                                out.append(f"  ⚠️ El punto de venta no cuenta con domicilio propio, pero cuenta con {texto_plat}.")
                             else:
                                 out.append(f"  • Plataformas: {nombres_plat}")
                                 
@@ -348,14 +372,18 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         try:
             res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
             todas = res.data
-            palabras = [p.strip() for p in texto.lower().replace(',', ' ').split() if len(p.strip()) > 2]
-            if not palabras: palabras = [texto.lower().strip()]
-            
+            palabras_user = normalizar_texto_busqueda(texto)
             tiendas = []
             for s in todas:
-                target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
-                if all(word in target for word in palabras):
+                target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}"
+                palabras_target = normalizar_texto_busqueda(target)
+                score = calcular_coincidencia(palabras_user, palabras_target)
+                if score >= 0.6:  # Al menos 60% de coincidencia
+                    # Añadir score para ordenar después
+                    s['_score'] = score
                     tiendas.append(s)
+            # Ordenar por mejor coincidencia
+            tiendas.sort(key=lambda x: x['_score'], reverse=True)
         except Exception as e:
             print("Error Búsqueda Supabase Horarios:", e)
             tiendas = []
@@ -485,14 +513,16 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             try:
                 res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
                 todas = res.data
-                palabras = [p.strip() for p in texto.lower().replace(',', ' ').split() if len(p.strip()) > 2]
-                if not palabras: palabras = [texto.lower().strip()]
-                
+                palabras_user = normalizar_texto_busqueda(texto)
                 tiendas = []
                 for s in todas:
-                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
-                    if all(word in target for word in palabras):
+                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}"
+                    palabras_target = normalizar_texto_busqueda(target)
+                    score = calcular_coincidencia(palabras_user, palabras_target)
+                    if score >= 0.6:
+                        s['_score'] = score
                         tiendas.append(s)
+                tiendas.sort(key=lambda x: x['_score'], reverse=True)
             except Exception as e:
                 print("Error Búsqueda Supabase PQRS:", e)
                 tiendas = []
@@ -548,14 +578,16 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             try:
                 res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
                 todas = res.data
-                palabras = [p.strip() for p in texto.lower().replace(',', ' ').split() if len(p.strip()) > 2]
-                if not palabras: palabras = [texto.lower().strip()]
-                
+                palabras_user = normalizar_texto_busqueda(texto)
                 tiendas = []
                 for s in todas:
-                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}".lower()
-                    if all(word in target for word in palabras):
+                    target = f"{s.get('ceco_nombre','')} {s.get('pdv_ciudad','')} {s.get('pdv_barrio','')} {s.get('pdv_ubicacion','')} {s.get('pdv_direccion','')}"
+                    palabras_target = normalizar_texto_busqueda(target)
+                    score = calcular_coincidencia(palabras_user, palabras_target)
+                    if score >= 0.6:
+                        s['_score'] = score
                         tiendas.append(s)
+                tiendas.sort(key=lambda x: x['_score'], reverse=True)
             except Exception as e:
                 tiendas = []
                 
