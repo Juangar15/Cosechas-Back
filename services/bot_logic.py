@@ -171,6 +171,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "¡Excelente elección! 🥤\n"
                 "Para brindarte una mejor experiencia, contamos con nuestras cartas en Español e Inglés.\n"
                 "*(Recuerda que aeropuertos y otras poblaciones como Leticia cuentan con un precio diferente)*\n\n"
+                "Sujeto a disponibilidad en punto de venta.\n\n"
                 "Por favor, abre la lista y selecciona el menú que deseas consultar:"
             )
             botones_bot = {
@@ -186,7 +187,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto in ["domicilios", "info de domicilios", "información de domicilios", "informacion de domicilios"]:
             estado_actual = "esperando_ubicacion"
             respuesta_bot = (
-                "¡Excelente! 🛵 Nosotros no hacemos o no nos encargamos del domicilio, sino que te damos la información de domicilio de la tienda más cercana.\n\n"
+                "¡Excelente! 🛵 En esta línea no tomamos tu pedido directamente, pero con gusto te brindamos la información de tu Cosechas más cercano para que puedas pedir.\n\n"
                 "Para mostrarte la sede, por favor envíame tu ubicación actual.\n\n"
                 "📱 *Si estás en celular:*\n"
                 "Toca el ícono del clip 📎 (o el +) y selecciona 'Ubicación'.\n\n"
@@ -661,19 +662,19 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 respuesta_bot = "Selecciona el tipo de novedad respecto al *Servicio*:"
                 botones_bot = {
                     "tipo": "lista", "boton": "Ver Novedades",
-                    "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta"]
+                    "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Otros"]
                 }
             elif texto == "producto":
                 respuesta_bot = "Selecciona el tipo de novedad respecto al *Producto*:"
                 botones_bot = {
                     "tipo": "lista", "boton": "Ver Novedades",
-                    "opciones": ["Preparación", "Objeto en el producto", "Presentación producto"]
+                    "opciones": ["Preparación", "Objeto en el producto", "Presentación producto", "Otros"]
                 }
             else:
                 respuesta_bot = "Selecciona el tipo de novedad de *Servicio o Producto* que más se ajuste:"
                 botones_bot = {
                     "tipo": "lista", "boton": "Ver Novedades",
-                    "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto"]
+                    "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto", "Otros"]
                 }
         else:
             respuesta_bot = "⚠️ Opción no reconocida. Por favor, elige el motivo:"
@@ -682,7 +683,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
     elif estado_actual == "esperando_novedad_pqrs":
         opciones_validas = [
             "actitud del asesor", "horario", "presentación sede", "presentacion sede", 
-            "factura electrónica", "factura electronica", "disponibilidad carta", "preparación", "preparacion", "objeto en el producto", "presentación producto", "presentacion producto"
+            "factura electrónica", "factura electronica", "disponibilidad carta", "preparación", "preparacion", "objeto en el producto", "presentación producto", "presentacion producto", "otros"
         ]
         if texto in opciones_validas:
             # Flujo Excepcional: Factura Electrónica
@@ -709,11 +710,11 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             respuesta_bot = "⚠️ Novedad no reconocida. Por favor selecciona una opción de la lista:"
             mot = datos_pqrs.get("motivo", "").lower()
             if mot == "servicio":
-                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta"]}
+                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Otros"]}
             elif mot == "producto":
-                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Preparación", "Objeto en el producto", "Presentación producto"]}
+                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Preparación", "Objeto en el producto", "Presentación producto", "Otros"]}
             else:
-                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto"]}
+                botones_bot = {"tipo": "lista", "boton": "Ver Novedades", "opciones": ["Actitud del asesor", "Horario", "Presentación sede", "Factura electrónica", "Disponibilidad carta", "Preparación", "Objeto en el producto", "Presentación producto", "Otros"]}
 
     elif estado_actual == "esperando_doc_factura":
         datos_pqrs["documento_factura"] = texto_usuario
