@@ -490,7 +490,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "nombre": "Carta_Nacional_ES_Cosechas.pdf"
             }
             respuesta_bot = "📄 Aquí tienes nuestra carta Nacional en Español.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Domicilios", "Menú Principal", "Finalizar"]
+            botones_bot = ["Info de Domicilios", "Menú Principal", "Finalizar"]
 
         elif texto == "national (en)": 
             estado_actual = "menu_opciones"
@@ -499,7 +499,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "nombre": "National_Menu_EN_Cosechas.pdf"
             }
             respuesta_bot = "📄 Here is our National Menu in English.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Domicilios", "Menú Principal", "Finalizar"]
+            botones_bot = ["Info de Domicilios", "Menú Principal", "Finalizar"]
 
         elif texto == "aeropuertos/leticia" or texto == "aeropuerto": 
             estado_actual = "menu_opciones"
@@ -508,7 +508,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "nombre": "Carta_Aeropuertos_ES_Cosechas.pdf"
             }
             respuesta_bot = "📄 Aquí tienes nuestra carta para Aeropuertos y Leticia en Español.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Domicilios", "Menú Principal", "Finalizar"]
+            botones_bot = ["Info de Domicilios", "Menú Principal", "Finalizar"]
 
         elif texto == "airports/others en": 
             estado_actual = "menu_opciones"
@@ -517,7 +517,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 "nombre": "Airports_Menu_EN_Cosechas.pdf"
             }
             respuesta_bot = "📄 Here is our Airport Menu in English.\n\n¿Deseas consultar algo más?"
-            botones_bot = ["Domicilios", "Menú Principal", "Finalizar"]
+            botones_bot = ["Info de Domicilios", "Menú Principal", "Finalizar"]
 
         else:
             respuesta_bot = "⚠️ Opción inválida. Por favor, abre la lista y selecciona uno de los menús disponibles:"
