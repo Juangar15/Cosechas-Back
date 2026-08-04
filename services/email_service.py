@@ -234,6 +234,7 @@ def enviar_correo_nueva_franquicia(celular: str, ciudad: str, local_identificado
                     <p><span class="highlight">🌆 Ciudad:</span> {ciudad}</p>
                     
                     <h3 style="margin-top: 20px; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Perfil e Interés</h3>
+                    <p><span class="highlight">🌆 Ciudad:</span> {ciudad}</p>
                     <p><span class="highlight">🎯 Interés:</span> {tipo_franquicia}</p>
                     <p><span class="highlight">🏢 Tiene Local:</span> {local_identificado}</p>
                     {direccion_html}
