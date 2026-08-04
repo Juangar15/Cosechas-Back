@@ -251,15 +251,14 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 estado_actual = "esperando_ubicacion"
                 respuesta_bot = "⚠️ Para ubicarte con precisión, por favor asegúrate de incluir el nombre de tu ciudad en el mensaje (Ejemplo: Calle 10 # 5-20, Bogotá)."
                 botones_bot = ["Volver"]
-                return estado_actual, respuesta_bot, botones_bot, adjunto_bot
                 
-            from services.location_service import geocode_address
-            lat_cliente, lon_cliente = geocode_address(texto)
-            if not lat_cliente:
-                estado_actual = "esperando_ubicacion"
-                respuesta_bot = "❌ No pudimos encontrar esa dirección en el mapa. Por favor verifica que esté escrita correctamente junto con tu ciudad (Ejemplo: Calle 10 # 5-20, Bogotá)."
-                botones_bot = ["Volver"]
-                return estado_actual, respuesta_bot, botones_bot, adjunto_bot
+            else:
+                from services.location_service import geocode_address
+                lat_cliente, lon_cliente = geocode_address(texto)
+                if not lat_cliente:
+                    estado_actual = "esperando_ubicacion"
+                    respuesta_bot = "❌ No pudimos encontrar esa dirección en el mapa. Por favor verifica que esté escrita correctamente junto con tu ciudad (Ejemplo: Calle 10 # 5-20, Bogotá)."
+                    botones_bot = ["Volver"]
             
         if lat_cliente and lon_cliente:
             try:
