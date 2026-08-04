@@ -182,7 +182,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto == "radicar pqrs":
             estado_actual = "esperando_barrio_pqrs"
             respuesta_bot = "Para direccionar tu queja, escribe la *Ciudad y Barrio* donde ocurrió el suceso:"
-            botones_bot = ["Sedes Generales", "Volver"]
+            botones_bot = ["Volver"]
             
         elif texto in ["domicilios", "info de domicilios", "información de domicilios", "informacion de domicilios"]:
             estado_actual = "esperando_ubicacion"
@@ -531,9 +531,9 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         if texto == "no tengo nit":
             estado_actual = "esperando_barrio_pqrs"
             respuesta_bot = "No te preocupes. Por favor, escríbeme en qué *ciudad y barrio* o zona se encuentra la tienda (ejemplo: 'Medellín Laureles' o 'Bogotá Chapinero'):"
-            botones_bot = ["Sedes Generales", "Volver"]
+            botones_bot = ["Volver"]
     elif estado_actual == "esperando_barrio_pqrs":
-        if texto == "sedes generales":
+        if False:
             datos_pqrs["nit"] = None 
             datos_pqrs["correo_franquiciado"] = SMTP_USER
             datos_pqrs["local"] = "Sedes Generales"
@@ -582,8 +582,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     "opciones": opciones_lista
                 }
             else:
-                respuesta_bot = "No encontré tiendas con esa ubicación. ¿Puedes intentar con otro barrio o ciudad? (O toca 'Sedes Generales')."
-                botones_bot = ["Sedes Generales", "Volver"]
+                respuesta_bot = "No encontré tiendas con esa ubicación. ¿Puedes intentar con otro barrio o ciudad?"
+                botones_bot = ["Volver"]
 
     elif estado_actual == "seleccionando_sede_pqrs":
         nombre_sede_seleccionada = None
@@ -604,7 +604,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             else:
                 estado_actual = "esperando_barrio_pqrs"
                 respuesta_bot = "Error al confirmar la sede. Intenta escribir el barrio de nuevo:"
-                botones_bot = ["Sedes Generales", "Volver"]
+                botones_bot = ["Volver"]
         else:
             try:
                 res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
@@ -642,8 +642,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                     "opciones": opciones_lista
                 }
             else:
-                respuesta_bot = "No encontré tiendas con esa ubicación. ¿Puedes intentar con otro barrio o ciudad? (O toca 'Sedes Generales')."
-                botones_bot = ["Sedes Generales", "Volver"]
+                respuesta_bot = "No encontré tiendas con esa ubicación. ¿Puedes intentar con otro barrio o ciudad?"
+                botones_bot = ["Volver"]
 
     elif estado_actual == "esperando_tipo_reporte":
         if texto in ["inconformidad", "sugerencia", "felicitación", "felicitacion"]:
