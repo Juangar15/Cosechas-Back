@@ -490,7 +490,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         if texto == "nacional (es)": 
             estado_actual = "menu_opciones"
             documento_bot = {
-                "url": f"{R2_PUBLIC_URL}/cartas/MENU_DIGITAL_ES.pdf",
+                "url": f"{R2_PUBLIC_URL}/cartas/MENU_DIGITAL_ES.pdf?v=2",
                 "nombre": "Carta_Nacional_ES_Cosechas.pdf"
             }
             respuesta_bot = "📄 Aquí tienes nuestra carta Nacional en Español.\n\n¿Deseas consultar algo más?"
@@ -499,7 +499,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto == "national (en)": 
             estado_actual = "menu_opciones"
             documento_bot = {
-                "url": f"{R2_PUBLIC_URL}/cartas/MENU_DIGITAL_EN.pdf",
+                "url": f"{R2_PUBLIC_URL}/cartas/MENU_DIGITAL_EN.pdf?v=2",
                 "nombre": "National_Menu_EN_Cosechas.pdf"
             }
             respuesta_bot = "📄 Here is our National Menu in English.\n\n¿Deseas consultar algo más?"
@@ -508,7 +508,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto == "aeropuertos/leticia" or texto == "aeropuerto": 
             estado_actual = "menu_opciones"
             documento_bot = {
-                "url": f"{R2_PUBLIC_URL}/cartas/MENU_AEROPUERTOS_ES.pdf",
+                "url": f"{R2_PUBLIC_URL}/cartas/MENU_AEROPUERTOS_ES.pdf?v=2",
                 "nombre": "Carta_Aeropuertos_ES_Cosechas.pdf"
             }
             respuesta_bot = "📄 Aquí tienes nuestra carta para Aeropuertos y Leticia en Español.\n\n¿Deseas consultar algo más?"
@@ -517,7 +517,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto == "airports/others en": 
             estado_actual = "menu_opciones"
             documento_bot = {
-                "url": f"{R2_PUBLIC_URL}/cartas/MENU_AEROPUERTOS_EN.pdf",
+                "url": f"{R2_PUBLIC_URL}/cartas/MENU_AEROPUERTOS_EN.pdf?v=2",
                 "nombre": "Airports_Menu_EN_Cosechas.pdf"
             }
             respuesta_bot = "📄 Here is our Airport Menu in English.\n\n¿Deseas consultar algo más?"
