@@ -785,8 +785,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 
             try:
                 tipo_completo = "Solicitud Factura Electrónica"
-                destinatario_interno = "servicioalcliente@cosechasexpress.com"
-                nombre_area = "Coordinación de Servicio al Cliente"
+                destinatario_interno = "sistemas@cosechasexpress.com"
+                nombre_area = "Sistemas"
                 correos_internos_str = destinatario_interno
                 
                 enviar_correo_pqrs_franquiciado(correo_f, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area, nombre_cliente, correo_cliente)
@@ -860,8 +860,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             
         try:
             tipo_completo = "Solicitud Factura Electrónica"
-            destinatario_interno = "servicioalcliente@cosechasexpress.com"
-            nombre_area = "Coordinación de Servicio al Cliente"
+            destinatario_interno = "sistemas@cosechasexpress.com"
+            nombre_area = "Sistemas"
             correos_internos_str = destinatario_interno
             
             enviar_correo_pqrs_franquiciado(correo_f, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area, nombre_cliente, correo_cliente)
