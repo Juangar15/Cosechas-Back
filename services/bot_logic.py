@@ -186,7 +186,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto == "radicar pqrs":
             estado_actual = "esperando_barrio_pqrs"
             respuesta_bot = "Para direccionar tu queja, escribe la *Ciudad y Barrio* donde ocurrió el suceso:"
-            botones_bot = ["Volver"]
+            botones_bot = ["No lo tengo identificado", "Volver"]
             
         elif texto in ["domicilios", "info de domicilios", "información de domicilios", "informacion de domicilios"]:
             estado_actual = "esperando_ubicacion"
