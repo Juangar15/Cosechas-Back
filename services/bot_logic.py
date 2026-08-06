@@ -775,7 +775,11 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             correo_cliente = datos_pqrs.get("correo_cliente", "No especificado")
             documento = datos_pqrs.get("documento_factura", "")
             
-            detalle = f"Solicitud de Facturación Electrónica.\nDocumento/NIT: {documento}"
+            detalle_base = f"Solicitud de Facturación Electrónica.\nDocumento/NIT: {documento}"
+            if "detalles_sede_adicionales" in datos_pqrs:
+                detalle = f"Detalles de ubicación de sede: {datos_pqrs['detalles_sede_adicionales']}\n\n{detalle_base}"
+            else:
+                detalle = detalle_base
             numero_radicado = "PENDIENTE"
             
             try:
@@ -840,7 +844,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         productos = datos_pqrs.get("productos_compra", "")
         valor = datos_pqrs.get("valor_compra", "")
         
-        detalle = (
+        detalle_base = (
             f"Solicitud de Facturación Electrónica.\n"
             f"Documento/NIT: {documento}\n"
             f"---\n"
@@ -850,6 +854,10 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             f"Productos: {productos}\n"
             f"Valor: {valor}"
         )
+        if "detalles_sede_adicionales" in datos_pqrs:
+            detalle = f"Detalles de ubicación de sede: {datos_pqrs['detalles_sede_adicionales']}\n\n{detalle_base}"
+        else:
+            detalle = detalle_base
         numero_radicado = "PENDIENTE"
         tiene_foto = "Sin Evidencia"
         

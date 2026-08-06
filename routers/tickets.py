@@ -3,7 +3,12 @@ from typing import Optional
 import uuid
 from config import supabase
 from models import ActualizarEstado
+from pydantic import BaseModel
 from .dependencies import get_current_user
+from services.email_service import enviar_correo_pqrs_franquiciado
+
+class AsignarSede(BaseModel):
+    nombre_sede: str
 
 router = APIRouter(prefix="/api", tags=["tickets"])
 
@@ -124,4 +129,72 @@ async def actualizar_estado_ticket(
         raise
     except Exception as e:
         print("Error al actualizar estado:", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor.")
+
+@router.put("/tickets/{ticket_id}/asignar_sede")
+async def asignar_sede_ticket(
+    ticket_id: int,
+    datos: AsignarSede,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        rol = current_user.get("rol")
+        if rol in ["espectador_sedes", "abogado_sedes", "especialista_leads", "sin_rol"]:
+            raise HTTPException(status_code=403, detail="No tienes permisos.")
+
+        # 1. Obtener la sede
+        res_sede = supabase.table("sedes_oficiales").select("*").eq("ceco_nombre", datos.nombre_sede).execute()
+        if not res_sede.data:
+            raise HTTPException(status_code=404, detail="Sede no encontrada.")
+        sede = res_sede.data[0]
+        nit_franquiciado = sede.get("tercero_nit", "SIN_NIT")
+        correo_franquiciado = sede.get("tercero_correo")
+
+        # 2. Obtener el ticket original
+        res_ticket = supabase.table("tickets_pqrs").select("*").eq("id", ticket_id).execute()
+        if not res_ticket.data:
+            raise HTTPException(status_code=404, detail="Ticket no encontrado.")
+        ticket = res_ticket.data[0]
+
+        # 3. Actualizar el ticket
+        update_payload = {
+            "nombre_franquicia": datos.nombre_sede,
+            "nit_franquiciado": nit_franquiciado
+        }
+        res_upd = supabase.table("tickets_pqrs").update(update_payload).eq("id", ticket_id).execute()
+
+        # 4. Enviar correo al franquiciado si tiene correo
+        if correo_franquiciado:
+            motivo = ticket.get("motivo")
+            tipo = ticket.get("tipo_novedad")
+            tipo_reporte = ticket.get("tipo_reporte")
+            
+            tipo_completo = f"{tipo_reporte} ({motivo}) - {tipo}" if motivo else f"{tipo_reporte} - {tipo}"
+            
+            destinatario_interno = "servicioalcliente@cosechasexpress.com"
+            nombre_area = "Coordinación de Servicio al Cliente"
+            
+            if tipo == "Factura electrónica":
+                tipo_completo = "Solicitud Factura Electrónica"
+                destinatario_interno = "sistemas@cosechasexpress.com"
+                nombre_area = "Sistemas"
+
+            enviar_correo_pqrs_franquiciado(
+                destinatario=correo_franquiciado,
+                radicado=str(ticket_id),
+                tipo=tipo_completo,
+                detalle=ticket.get("detalle", ""),
+                local=datos.nombre_sede,
+                celular=ticket.get("celular_cliente", ""),
+                correo_interno=destinatario_interno,
+                nombre_area=nombre_area,
+                nombre_cliente=ticket.get("nombre_cliente", ""),
+                correo_cliente=ticket.get("correo_cliente", "")
+            )
+
+        return {"status": "success", "ticket_actualizado": res_upd.data[0]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Error asignando sede:", e)
         raise HTTPException(status_code=500, detail="Error interno del servidor.")
