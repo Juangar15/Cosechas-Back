@@ -535,15 +535,12 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         if texto == "no tengo nit":
             estado_actual = "esperando_barrio_pqrs"
             respuesta_bot = "No te preocupes. Por favor, escríbeme en qué *ciudad y barrio* o zona se encuentra la tienda (ejemplo: 'Medellín Laureles' o 'Bogotá Chapinero'):"
-            botones_bot = ["Volver"]
+            botones_bot = ["No lo tengo identificado", "Volver"]
     elif estado_actual == "esperando_barrio_pqrs":
-        if False:
-            datos_pqrs["nit"] = None 
-            datos_pqrs["correo_franquiciado"] = SMTP_USER
-            datos_pqrs["local"] = "Sedes Generales"
-            estado_actual = "esperando_tipo_reporte"
-            respuesta_bot = "Entendido. Radicaremos el reporte a nivel general.\n\n¿Qué tipo de reporte deseas realizar?"
-            botones_bot = ["Inconformidad", "Sugerencia", "Felicitación"]
+        if texto in ["no lo tengo identificado", "no lo se", "no lo sé"]:
+            estado_actual = "esperando_detalles_sede_pqrs"
+            respuesta_bot = "Entiendo. Por favor, descríbenos cualquier detalle que nos ayude a identificar el punto de venta (ej: estaba dentro de un supermercado, al lado de una bomba de gasolina, etc.):"
+            botones_bot = ["Volver"]
         else:
             try:
                 res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
@@ -587,7 +584,17 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 }
             else:
                 respuesta_bot = "No encontré tiendas con esa ubicación. ¿Puedes intentar con otro barrio o ciudad?"
-                botones_bot = ["Volver"]
+                botones_bot = ["No lo tengo identificado", "Volver"]
+
+    elif estado_actual == "esperando_detalles_sede_pqrs":
+        datos_pqrs["nit"] = "SIN_NIT"
+        datos_pqrs["local"] = "Punto de venta no identificado"
+        datos_pqrs["correo_franquiciado"] = None
+        datos_pqrs["detalles_sede_adicionales"] = texto_usuario
+        
+        estado_actual = "esperando_tipo_reporte"
+        respuesta_bot = "Perfecto, hemos registrado los detalles para ayudar a identificar la sede.\n\n¿Qué tipo de reporte deseas realizar?"
+        botones_bot = ["Inconformidad", "Sugerencia", "Felicitación"]
 
     elif estado_actual == "seleccionando_sede_pqrs":
         nombre_sede_seleccionada = None
@@ -608,7 +615,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             else:
                 estado_actual = "esperando_barrio_pqrs"
                 respuesta_bot = "Error al confirmar la sede. Intenta escribir el barrio de nuevo:"
-                botones_bot = ["Volver"]
+                botones_bot = ["No lo tengo identificado", "Volver"]
         else:
             try:
                 res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
@@ -907,6 +914,9 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         motivo = datos_pqrs.get("motivo", None)
         
         detalle = datos_pqrs.get("detalle", "")
+        if "detalles_sede_adicionales" in datos_pqrs:
+            detalle = f"Detalles de ubicación de sede: {datos_pqrs['detalles_sede_adicionales']}\n\n{detalle}"
+            
         nit_guardar = datos_pqrs.get("nit")
         local_nombre = datos_pqrs.get("local", "Cosechas")
         nombre_cliente = datos_pqrs.get("nombre_cliente", "No especificado")
@@ -940,7 +950,8 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             tipo_completo = f"{tipo_reporte} ({motivo}) - {tipo}" if motivo else f"{tipo_reporte} - {tipo}"
             
             # 1. Al Franquiciado
-            enviar_correo_pqrs_franquiciado(correo_franquiciado_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area, nombre_cliente, correo_cliente)
+            if correo_franquiciado_str:
+                enviar_correo_pqrs_franquiciado(correo_franquiciado_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area, nombre_cliente, correo_cliente)
             
             # 2. Al Equipo Interno
             if correos_internos_str:
