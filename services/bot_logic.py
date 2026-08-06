@@ -600,7 +600,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 franquicia = res_db.data[0]
                 datos_pqrs["nit"] = franquicia.get("tercero_nit", "SIN_NIT")
                 datos_pqrs["local"] = franquicia.get("ceco_nombre", "Sede Desconocida")
-                datos_pqrs["correo_franquiciado"] = franquicia.get("admin_correo") or SMTP_USER
+                datos_pqrs["correo_franquiciado"] = franquicia.get("tercero_correo") or SMTP_USER
                 
                 estado_actual = "esperando_tipo_reporte"
                 respuesta_bot = f"✅ Sede confirmada: {franquicia.get('ceco_nombre', '')}.\n\n¿Qué tipo de reporte deseas realizar?"
@@ -744,20 +744,22 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         datos_pqrs["nombre_cliente"] = texto_usuario
         estado_actual = "esperando_foto_factura"
         respuesta_bot = (
-            "Finalmente, debes adjuntar obligatoriamente una foto de la *tirilla de compra* (factura física).\n"
-            "Si no la tienes, debes acercarte al punto de venta y solicitarla ya que para este proceso es estrictamente necesaria.\n\n"
+            "Para agilizar el proceso, por favor adjunta una foto de la *tirilla de compra* (factura física).\n\n"
             "(📸 *Envía la foto de la tirilla* ahora mismo aquí en el chat)."
         )
-        botones_bot = ["No tengo la foto", "Volver"]
+        botones_bot = ["No tengo la factura", "Volver"]
 
     elif estado_actual == "esperando_foto_factura":
-        if texto == "no tengo la foto" or ("[imagen_url]:" not in texto and "[documento_url]:" not in texto):
-            estado_actual = "menu_opciones"
-            datos_pqrs = {}
-            respuesta_bot = "⚠️ Sin la foto de la tirilla de compra no podemos procesar la solicitud. Debes acercarte al punto de venta y solicitarla ya que para este proceso es necesaria.\n\nEl proceso ha sido cancelado."
-            botones_bot = ["Menú Principal", "Finalizar"]
+        if texto in ["no tengo la factura", "no tengo la foto"]:
+            estado_actual = "esperando_fecha_compra_factura"
+            respuesta_bot = "No hay problema. Para procesar tu solicitud, por favor escríbeme la *Fecha de la compra* (ej: 15 de Mayo):"
+            botones_bot = ["Volver"]
+        elif "[imagen_url]:" not in texto and "[documento_url]:" not in texto:
+            respuesta_bot = "⚠️ Por favor envía una foto de la factura o toca el botón 'No tengo la factura'."
+            botones_bot = ["No tengo la factura", "Volver"]
         else:
             tiene_foto = texto.split("]:")[1] if "]:" in texto else texto
+            datos_pqrs["foto_factura"] = tiene_foto
             
             correo_f = datos_pqrs.get("correo_franquiciado", SMTP_USER)
             local_nombre = datos_pqrs.get("local", "Cosechas")
@@ -796,6 +798,81 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             datos_pqrs = {}
             respuesta_bot = f"✅ *Solicitud de Facturación Recibida*\n*Ticket: #{numero_radicado}*\n\nTu solicitud y la foto de la tirilla han sido enviadas. Se procesará pronto."
             botones_bot = ["Menú Principal", "Finalizar"]
+
+    elif estado_actual == "esperando_fecha_compra_factura":
+        datos_pqrs["fecha_compra"] = texto_usuario
+        estado_actual = "esperando_hora_compra_factura"
+        respuesta_bot = "Gracias. ¿Cuál fue la *Hora aproximada* de la compra?"
+        botones_bot = ["Volver"]
+
+    elif estado_actual == "esperando_hora_compra_factura":
+        datos_pqrs["hora_compra"] = texto_usuario
+        estado_actual = "esperando_productos_factura"
+        respuesta_bot = "Entendido. Escribe el o los *Productos* que compraste:"
+        botones_bot = ["Volver"]
+
+    elif estado_actual == "esperando_productos_factura":
+        datos_pqrs["productos_compra"] = texto_usuario
+        estado_actual = "esperando_valor_factura"
+        respuesta_bot = "Por último, dime *el valor de la compra*:"
+        botones_bot = ["Volver"]
+
+    elif estado_actual == "esperando_valor_factura":
+        datos_pqrs["valor_compra"] = texto_usuario
+        
+        # Procesar envío sin foto
+        correo_f = datos_pqrs.get("correo_franquiciado", SMTP_USER)
+        local_nombre = datos_pqrs.get("local", "Cosechas")
+        nit_guardar = datos_pqrs.get("nit")
+        nombre_cliente = datos_pqrs.get("nombre_cliente", "No especificado")
+        correo_cliente = datos_pqrs.get("correo_cliente", "No especificado")
+        documento = datos_pqrs.get("documento_factura", "")
+        
+        fecha_compra = datos_pqrs.get("fecha_compra", "")
+        hora_compra = datos_pqrs.get("hora_compra", "")
+        productos = datos_pqrs.get("productos_compra", "")
+        valor = datos_pqrs.get("valor_compra", "")
+        
+        detalle = (
+            f"Solicitud de Facturación Electrónica.\n"
+            f"Documento/NIT: {documento}\n"
+            f"---\n"
+            f"No adjuntó foto de tirilla.\n"
+            f"Fecha de compra: {fecha_compra}\n"
+            f"Hora aproximada: {hora_compra}\n"
+            f"Productos: {productos}\n"
+            f"Valor: {valor}"
+        )
+        numero_radicado = "PENDIENTE"
+        tiene_foto = "Sin Evidencia"
+        
+        try:
+            respuesta_insert = supabase.table("tickets_pqrs").insert({
+                "celular_cliente": celular, "nit_franquiciado": nit_guardar, "nombre_franquicia": local_nombre,
+                "tipo_reporte": "Sugerencia", "motivo": "Servicio",
+                "tipo_novedad": "Factura electrónica", "detalle": detalle, "evidencia": tiene_foto,
+                "nombre_cliente": nombre_cliente, "correo_cliente": correo_cliente
+            }).execute()
+            if respuesta_insert.data:
+                numero_radicado = str(respuesta_insert.data[0]['id'])
+        except Exception as e:
+            print(f"Error DB Factura sin foto: {e}")
+            
+        try:
+            tipo_completo = "Solicitud Factura Electrónica"
+            destinatario_interno = "servicioalcliente@cosechasexpress.com"
+            nombre_area = "Coordinación de Servicio al Cliente"
+            correos_internos_str = destinatario_interno
+            
+            enviar_correo_pqrs_franquiciado(correo_f, numero_radicado, tipo_completo, detalle, local_nombre, celular, destinatario_interno, nombre_area, nombre_cliente, correo_cliente)
+            enviar_correo_pqrs_interno(correos_internos_str, numero_radicado, tipo_completo, detalle, local_nombre, celular, nombre_area, nombre_cliente, correo_cliente)
+        except Exception as e:
+            print("Error enviando correo factura sin foto:", e)
+            
+        estado_actual = "menu_opciones"
+        datos_pqrs = {}
+        respuesta_bot = f"✅ *Solicitud de Facturación Recibida*\n*Ticket: #{numero_radicado}*\n\nTu solicitud con los detalles de compra ha sido enviada. Se procesará pronto."
+        botones_bot = ["Menú Principal", "Finalizar"]
 
     elif estado_actual == "esperando_nombre_pqrs":
         datos_pqrs["nombre_cliente"] = texto_usuario
