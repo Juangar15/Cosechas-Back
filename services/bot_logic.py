@@ -186,7 +186,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         elif texto == "radicar pqrs":
             estado_actual = "esperando_barrio_pqrs"
             respuesta_bot = "Para direccionar tu queja, escribe la *Ciudad y Barrio* donde ocurrió el suceso:"
-            botones_bot = ["No lo tengo identificado", "Volver"]
+            botones_bot = ["No sé la sede", "Volver"]
             
         elif texto in ["domicilios", "info de domicilios", "información de domicilios", "informacion de domicilios"]:
             estado_actual = "esperando_ubicacion"
@@ -535,9 +535,9 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
         if texto == "no tengo nit":
             estado_actual = "esperando_barrio_pqrs"
             respuesta_bot = "No te preocupes. Por favor, escríbeme en qué *ciudad y barrio* o zona se encuentra la tienda (ejemplo: 'Medellín Laureles' o 'Bogotá Chapinero'):"
-            botones_bot = ["No lo tengo identificado", "Volver"]
+            botones_bot = ["No sé la sede", "Volver"]
     elif estado_actual == "esperando_barrio_pqrs":
-        if texto in ["no lo tengo identificado", "no lo se", "no lo sé"]:
+        if texto in ["no sé la sede", "no se la sede", "no lo se", "no lo sé"]:
             estado_actual = "esperando_detalles_sede_pqrs"
             respuesta_bot = "Entiendo. Por favor, descríbenos cualquier detalle que nos ayude a identificar el punto de venta (ej: estaba dentro de un supermercado, al lado de una bomba de gasolina, etc.):"
             botones_bot = ["Volver"]
@@ -584,7 +584,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
                 }
             else:
                 respuesta_bot = "No encontré tiendas con esa ubicación. ¿Puedes intentar con otro barrio o ciudad?"
-                botones_bot = ["No lo tengo identificado", "Volver"]
+                botones_bot = ["No sé la sede", "Volver"]
 
     elif estado_actual == "esperando_detalles_sede_pqrs":
         datos_pqrs["nit"] = "SIN_NIT"
@@ -615,7 +615,7 @@ def procesar_mensaje_inteligente(texto_usuario: str, celular: str):
             else:
                 estado_actual = "esperando_barrio_pqrs"
                 respuesta_bot = "Error al confirmar la sede. Intenta escribir el barrio de nuevo:"
-                botones_bot = ["No lo tengo identificado", "Volver"]
+                botones_bot = ["No sé la sede", "Volver"]
         else:
             try:
                 res = supabase.table("sedes_oficiales").select("*").eq('pdv_estado', 'OPERANDO').execute()
